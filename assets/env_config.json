@@ -1,0 +1,12 @@
+{
+  "Debug": {
+        "baseUrl": "https://webapps.fattal.com.lb/romance-whs/api"
+
+  },
+  "Profile": {
+    "baseUrl": "https://webapps.fattal.com.lb/romance-whs/api"
+  },
+  "Release": {
+    "baseUrl": "https://webapps.fattal.com.lb/romance-whs/api"
+  }
+}

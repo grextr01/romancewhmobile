@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "romancewhs (debug mode)",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define=ENV=Debug"]
+    },
+    {
+      "name": "romancewhs (profile mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "args": ["--dart-define=ENV=Profile"]
+    },
+    {
+      "name": "romancewhs (release mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "args": ["--dart-define=ENV=Release"]
+    }
+  ]
+}
