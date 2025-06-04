@@ -8,7 +8,7 @@ class BottomSheetSelector extends StatelessWidget {
       required this.onTap});
   final String title;
   final List<Map<String, dynamic>> items;
-  final Function(String name, String value) onTap;
+  final Function(String name, String value, String trxCode) onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,8 @@ class BottomSheetSelector extends StatelessWidget {
                   return ListTile(
                     title: Text(items[index]['Name']),
                     onTap: () {
-                      onTap(items[index]['Name'], items[index]['Value']);
+                      onTap(items[index]['Name'], items[index]['Value'],
+                          items[index]['TrxCode'] ?? '');
                     },
                   );
                 },

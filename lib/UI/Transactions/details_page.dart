@@ -287,75 +287,85 @@ class DetailsPage extends StatelessWidget {
                                   padding: EdgeInsets.only(left: 0),
                                   child: Column(
                                     children: state.transactionDetails!
-                                        .map((detail) => Container(
-                                              padding: EdgeInsets.only(
-                                                  top: 10, left: 8, bottom: 10),
-                                              decoration: BoxDecoration(
-                                                  color: detail.barcode == ''
-                                                      ? Colors.red[100]
-                                                      : detail.scannedQty ==
-                                                              (detail.freeQty +
-                                                                  detail
-                                                                      .quantity)
-                                                          ? Colors.green[100]
-                                                          : Colors.transparent,
-                                                  border: Border(
-                                                      bottom: BorderSide(
-                                                          color:
-                                                              Colors.grey[400]!,
-                                                          width: 1))),
-                                              child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                children: [
-                                                  SizedBox(
-                                                      width: 158,
-                                                      child: Text(
-                                                        detail.description
-                                                            .toString(),
-                                                        style: TextStyle(
-                                                            fontSize: 13),
-                                                      )),
-                                                  Padding(
-                                                      padding: EdgeInsets.only(
-                                                          left: 6)),
-                                                  SizedBox(
-                                                    width: 50,
-                                                    child: Text((detail
-                                                                .quantity +
-                                                            detail.freeQty -
-                                                            detail.scannedQty)
-                                                        .toString()),
-                                                  ),
-                                                  Padding(
-                                                      padding: EdgeInsets.only(
-                                                          left: 10)),
-                                                  SizedBox(
-                                                    width: 50,
-                                                    child: Text(
-                                                        (detail.quantity +
-                                                                detail.freeQty)
-                                                            .toString()),
-                                                  ),
-                                                  Padding(
-                                                      padding: EdgeInsets.only(
-                                                          left: 10)),
-                                                  SizedBox(
-                                                    width: 60,
-                                                    child: Text(detail
-                                                        .scannedQty
-                                                        .toString()),
-                                                  ),
-                                                  SizedBox(
-                                                    width: 60,
-                                                    child: Text(detail.itemCode
-                                                        .toString()),
-                                                  ),
-                                                  Padding(
-                                                      padding: EdgeInsets.only(
-                                                          left: 10)),
-                                                ],
+                                        .map((detail) => GestureDetector(
+                                              child: Container(
+                                                padding: EdgeInsets.only(
+                                                    top: 10,
+                                                    left: 8,
+                                                    bottom: 10),
+                                                decoration: BoxDecoration(
+                                                    color: detail.barcode == ''
+                                                        ? Colors.red[100]
+                                                        : detail.scannedQty ==
+                                                                (detail.freeQty +
+                                                                    detail
+                                                                        .quantity)
+                                                            ? Colors.green[100]
+                                                            : Colors
+                                                                .transparent,
+                                                    border: Border(
+                                                        bottom: BorderSide(
+                                                            color: Colors
+                                                                .grey[400]!,
+                                                            width: 1))),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    SizedBox(
+                                                        width: 158,
+                                                        child: Text(
+                                                          detail.description
+                                                              .toString(),
+                                                          style: TextStyle(
+                                                              fontSize: 13),
+                                                        )),
+                                                    Padding(
+                                                        padding:
+                                                            EdgeInsets.only(
+                                                                left: 6)),
+                                                    SizedBox(
+                                                      width: 50,
+                                                      child: Text((detail
+                                                                  .quantity +
+                                                              detail.freeQty -
+                                                              detail.scannedQty)
+                                                          .toString()),
+                                                    ),
+                                                    Padding(
+                                                        padding:
+                                                            EdgeInsets.only(
+                                                                left: 10)),
+                                                    SizedBox(
+                                                      width: 50,
+                                                      child: Text((detail
+                                                                  .quantity +
+                                                              detail.freeQty)
+                                                          .toString()),
+                                                    ),
+                                                    Padding(
+                                                        padding:
+                                                            EdgeInsets.only(
+                                                                left: 10)),
+                                                    SizedBox(
+                                                      width: 60,
+                                                      child: Text(detail
+                                                          .scannedQty
+                                                          .toString()),
+                                                    ),
+                                                    SizedBox(
+                                                      width: 60,
+                                                      child: Text(detail
+                                                          .itemCode
+                                                          .toString()),
+                                                    ),
+                                                    Padding(
+                                                        padding:
+                                                            EdgeInsets.only(
+                                                                left: 10)),
+                                                  ],
+                                                ),
                                               ),
                                             ))
                                         .toList(),

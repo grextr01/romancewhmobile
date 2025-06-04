@@ -74,7 +74,7 @@ class TransactionsHomePage extends StatelessWidget {
                                         'Value': item.leCode
                                       })
                                   .toList(),
-                              onTap: (name, value) {
+                              onTap: (name, value, trxCode) {
                                 leController.text = name;
                                 context
                                     .read<TransactionsHomeCubit>()
@@ -104,14 +104,15 @@ class TransactionsHomePage extends StatelessWidget {
                               items: state.transactionTypes!
                                   .map((item) => {
                                         'Name': item.transactionName,
-                                        'Value': item.transactionCode
+                                        'Value': item.transactionCode,
+                                        'TrxCode': item.trxCode
                                       })
                                   .toList(),
-                              onTap: (name, value) {
+                              onTap: (name, value, trxCode) {
                                 transactionTypeController.text = name;
                                 context
                                     .read<TransactionsHomeCubit>()
-                                    .setSelectedTransactionType(value);
+                                    .setSelectedTransactionType(value, trxCode);
                                 Navigator.pop(context);
                               }));
                     },

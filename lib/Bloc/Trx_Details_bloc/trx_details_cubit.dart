@@ -59,9 +59,9 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
 
   bool scanItemBarcode(String barcode, BuildContext context,
       FocusNode focusNode, int scannedQty) {
-    //barcode = "3616305181053";
+    //barcode = "4013496529616";
     TransactionDetail item = state.transactionDetails!.firstWhere(
-      (element) => element.barcode == barcode,
+      (element) => element.barcode == barcode || element.itemCode == barcode,
       orElse: () => TransactionDetail(
         lineId: 0,
         orgId: 0,
@@ -73,14 +73,14 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
         barcode: '',
       ),
     );
-    if (state.transactionDetails != null) {
-      for (var element in state.transactionDetails!) {
-        if (element.barcode == barcode) {
-          item = element;
-          break;
-        }
-      }
-    }
+    // if (state.transactionDetails != null) {
+    //   for (var element in state.transactionDetails!) {
+    //     if (element.barcode == barcode) {
+    //       item = element;
+    //       break;
+    //     }
+    //   }
+    // }
     emit(state.copyWith(
       scannedBarcode: barcode,
       scannedItemCode: item.itemCode,
@@ -126,7 +126,7 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
     ));
     if (state.transactionDetails != null) {
       for (var element in state.transactionDetails!) {
-        if (element.barcode == barcode) {
+        if (element.barcode == barcode || element.itemCode == barcode) {
           item = element;
           break;
         }

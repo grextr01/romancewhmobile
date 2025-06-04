@@ -14,6 +14,7 @@ import 'package:romancewhs/Controllers/trx_details_controller.dart';
 import 'package:romancewhs/Models/Boxes/boxes.dart';
 import 'package:romancewhs/Models/Hive/hive_user.dart';
 import 'package:romancewhs/UX/global.dart';
+import 'package:romancewhs/UX/update.dart';
 
 import 'UX/LoadEnv.dart';
 
@@ -27,6 +28,7 @@ Future<void> main() async {
   baseUrl = config.baseUrl;
   Hive.registerAdapter(HiveUserAdapter());
   userBox = await Hive.openBox<HiveUser>('userBox');
+  checkForUpdate();
   runApp(MultiProvider(
     providers: [
       BlocProvider(

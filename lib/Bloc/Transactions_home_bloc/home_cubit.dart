@@ -13,8 +13,10 @@ class TransactionsHomeCubit extends Cubit<TransactionsHomeController> {
     emit(state.copyWith(selectedEntity: selectedEntity));
   }
 
-  void setSelectedTransactionType(String transactionType) {
-    emit(state.copyWith(selectedType: transactionType));
+  void setSelectedTransactionType(
+      String transactionType, String selectedTrxCode) {
+    emit(state.copyWith(
+        selectedType: transactionType, selectedTrxCode: selectedTrxCode));
   }
 
   void setFromDate(String fromDate) {
@@ -48,7 +50,8 @@ class TransactionsHomeCubit extends Cubit<TransactionsHomeController> {
               .map((type) => TransactionType(
                   transactionCode: type['Transaction_Code'],
                   transactionName: type['Transaction_Name'],
-                  action: type['Action']))
+                  action: type['Action'],
+                  trxCode: type['Trx_code']))
               .toList(),
           loading: false,
           error: false));
@@ -66,7 +69,7 @@ class TransactionsHomeCubit extends Cubit<TransactionsHomeController> {
         .format(DateFormat('dd/MM/yyyy').parse(state.toDate));
     var response = await api.getApiToMap(
         api.apiBaseUrl,
-        '/Warehouse/romance/header?legalEntityId=${state.selectedEntity}&dateFrom=$dateFrom&dateTo=$dateTo&trxType=${state.selectedType}',
+        '/Warehouse/romance/header?legalEntityId=${state.selectedEntity}&dateFrom=$dateFrom&dateTo=$dateTo&trxType=${state.selectedType}&trxCode=${state.selectedTrxCode}',
         'get');
     if (response['statusCode'] == 200) {
       List transactions = response['data'];

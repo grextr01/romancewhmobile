@@ -1,10 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:romancewhs/Bloc/Trx_Details_bloc/trx_details_page_bloc.dart';
-import 'package:romancewhs/Models/transaction_detail.dart';
 import 'package:romancewhs/UX/Api.dart';
 import 'package:romancewhs/main.dart';
-
 import '../../UX/Theme.dart';
 
 class TransactionsPage extends StatefulWidget {
@@ -74,58 +72,90 @@ class _TransactionsPageState extends State<TransactionsPage> {
               child: ListView.builder(
                 itemCount: transactions.length,
                 itemBuilder: (context, index) {
-                  return InkWell(
-                    onTap: () async {
-                      // List<TransactionDetail> transactionDetails =
-                      //     await getTransactionDetails(
-                      //         transactions[index]['TRX_HEADER_ID']);
-                      mainNavigatorKey.currentState!.push(MaterialPageRoute(
-                          builder: (_) => TrxDetailsBlocPage(
-                                headerId: transactions[index]['TRX_HEADER_ID'],
-                                trxHeader: transactions[index],
-                                onSubmit: (headerId) {
-                                  transactions.removeWhere((transaction) =>
-                                      transaction['TRX_HEADER_ID'].toString() ==
-                                      headerId);
-                                  setState(() {});
-                                },
-                              )));
-                    },
-                    child: Container(
-                      padding: EdgeInsets.only(left: 15, top: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text.rich(TextSpan(
-                              text: 'Cons Billing Number: ',
-                              style: const TextStyle(
-                                  fontSize: 16.5, fontWeight: FontWeight.w700),
-                              children: [
-                                TextSpan(
-                                    text: transactions[index]
-                                            ['CONS_BILLING_NUMBER']
-                                        .toString(),
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.normal))
-                              ])),
-                          Text.rich(TextSpan(
-                              text: 'Customer: ',
-                              style: const TextStyle(
-                                  fontSize: 16.5, fontWeight: FontWeight.w700),
-                              children: [
-                                TextSpan(
-                                    text: transactions[index]['CUSTOMER_NAME']
-                                        .toString(),
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.normal))
-                              ])),
-                          Padding(padding: EdgeInsets.only(top: 10)),
-                          Container(
-                            height: 1,
-                            width: double.infinity,
-                            color: Colors.grey[300],
+                  return Material(
+                    child: GestureDetector(
+                      onLongPressStart: (details) async {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        const menuWidth = 150.0;
+                        final dx = screenWidth - menuWidth - 10;
+                        final dy = details.globalPosition.dy;
+
+                        final selected = await showMenu(
+                          context: context,
+                          position: RelativeRect.fromLTRB(
+                            dx,
+                            dy,
+                            0,
+                            0,
                           ),
-                        ],
+                          items: [
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete'),
+                            ),
+                          ],
+                        );
+                        if (selected == 'delete') {
+                          submitTransaction(
+                              transactions[index]['TRX_HEADER_ID'].toString());
+                        }
+                      },
+                      child: InkWell(
+                        onTap: () async {
+                          mainNavigatorKey.currentState!.push(MaterialPageRoute(
+                              builder: (_) => TrxDetailsBlocPage(
+                                    headerId: transactions[index]
+                                        ['TRX_HEADER_ID'],
+                                    trxHeader: transactions[index],
+                                    onSubmit: (headerId) {
+                                      transactions.removeWhere((transaction) =>
+                                          transaction['TRX_HEADER_ID']
+                                              .toString() ==
+                                          headerId);
+                                      setState(() {});
+                                    },
+                                  )));
+                        },
+                        child: Container(
+                          padding: EdgeInsets.only(left: 15, top: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text.rich(TextSpan(
+                                  text: 'Cons Billing Number: ',
+                                  style: const TextStyle(
+                                      fontSize: 16.5,
+                                      fontWeight: FontWeight.w700),
+                                  children: [
+                                    TextSpan(
+                                        text: transactions[index]
+                                                ['CONS_BILLING_NUMBER']
+                                            .toString(),
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.normal))
+                                  ])),
+                              Text.rich(TextSpan(
+                                  text: 'Customer: ',
+                                  style: const TextStyle(
+                                      fontSize: 16.5,
+                                      fontWeight: FontWeight.w700),
+                                  children: [
+                                    TextSpan(
+                                        text: transactions[index]
+                                                ['CUSTOMER_NAME']
+                                            .toString(),
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.normal))
+                                  ])),
+                              Padding(padding: EdgeInsets.only(top: 10)),
+                              Container(
+                                height: 1,
+                                width: double.infinity,
+                                color: Colors.grey[300],
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -136,24 +166,49 @@ class _TransactionsPageState extends State<TransactionsPage> {
         ));
   }
 
-  Future<List<TransactionDetail>> getTransactionDetails(int headerId) async {
-    List<TransactionDetail> transactionDetails = [];
+  Future<bool> submitTransaction(String headerId) async {
     var response = await api.getApiToMap(
-        api.apiBaseUrl, '/Warehouse/romance/details/$headerId', 'get');
+        api.apiBaseUrl, '/Warehouse/romance/update-erp/$headerId', 'post');
     if (response['statusCode'] == 200) {
-      List data = response['data'];
-      transactionDetails =
-          data.map((item) => TransactionDetail.fromJson(item)).toList();
-      // transactionDetails.add(TransactionDetail(
-      //     lineId: '1',
-      //     orgId: '158',
-      //     orgCode: 'test',
-      //     itemCode: '123456',
-      //     description: 'Test Item',
-      //     quantity: 5,
-      //     freeQty: 0,
-      //     barcode: '762220143053'));
-    } else {}
-    return transactionDetails;
+      transactions.removeWhere(
+          (transaction) => transaction['TRX_HEADER_ID'].toString() == headerId);
+      setState(() {});
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Transaction submitted successfully.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return true;
+    } else {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text(
+                'Error submitting transaction. Kindly Contact your IT.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return false;
+    }
   }
 }
