@@ -32,7 +32,8 @@ class LoginCubit extends Cubit<LoginController> {
           token: response['token'],
           firstName: response['firstName'],
           lastName: response['lastName'],
-          userId: response['userID'].toString());
+          userId: response['userID'].toString(),
+          username: username);
       userBox.put('activeUser', hiveUser);
       emit(state.copyWith(
           token: response['token'], legalEntities: state.legalEntities));

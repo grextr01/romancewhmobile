@@ -19,6 +19,7 @@ Future<void> checkForUpdate() async {
         ..badCertificateCallback =
             (X509Certificate cert, String host, int port) => true;
     };
+    Fluttertoast.showToast(msg: 'Checking For Updates...');
     final response = await dio.get('$baseUrl/Update/check');
     final latestVersion = response.data['version'];
     final apkUrl = '$baseUrl/Update/download-apk';
@@ -27,13 +28,13 @@ Future<void> checkForUpdate() async {
     final currentVersion = packageInfo.version;
 
     if (latestVersion != currentVersion) {
-      Fluttertoast.showToast(msg: 'Updating App...');
-
+      Fluttertoast.showToast(msg: 'Downloading Update...');
       final shouldUpdate = true;
       if (shouldUpdate == true) {
         final dir = await getExternalStorageDirectory();
         final apkPath = '${dir!.path}/update.apk';
         await dio.download(apkUrl, apkPath);
+        Fluttertoast.showToast(msg: 'Updating App...');
         await AppInstaller.installApk(apkPath);
       }
     }

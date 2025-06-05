@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:romancewhs/Bloc/Login_bloc/login_cubit.dart';
 import 'package:romancewhs/Controllers/login_controller.dart';
+import 'package:romancewhs/Models/Boxes/boxes.dart';
 import 'package:romancewhs/UX/Theme.dart';
 import '../Components.dart/custom_button.dart';
 import '../Components.dart/custom_textfield.dart';
@@ -16,6 +17,7 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    setUserName();
     return Scaffold(
         appBar: AppBar(
           elevation: 1,
@@ -83,7 +85,7 @@ class LoginPage extends StatelessWidget {
                                   CustomTextField(
                                     controller: _emailController,
                                     focusNode: _emailFocusNode,
-                                    hintText: 'Email..',
+                                    hintText: 'Username..',
                                     autofillHints: const [AutofillHints.email],
                                     prefixIcon: const Icon(
                                       Icons.email,
@@ -159,5 +161,13 @@ class LoginPage extends StatelessWidget {
             ),
           ),
         ));
+  }
+
+  void setUserName() {
+    var user = userBox.get('activeUser');
+    if (user == null) {
+      return;
+    }
+    _emailController.text = user.username;
   }
 }

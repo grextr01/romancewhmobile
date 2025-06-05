@@ -12,11 +12,13 @@ class HiveUser {
   String firstName;
   @HiveField(3)
   String lastName;
+  @HiveField(4)
+  String username;
 
-  HiveUser({
-    required this.token,
-    required this.userId,
-    required this.firstName,
-    required this.lastName,
-  });
+  HiveUser(
+      {required this.token,
+      required this.userId,
+      required this.firstName,
+      required this.lastName,
+      required this.username});
 }

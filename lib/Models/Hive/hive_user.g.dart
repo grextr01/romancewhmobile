@@ -7,11 +7,11 @@ class HiveUserAdapter extends TypeAdapter<HiveUser> {
   @override
   HiveUser read(BinaryReader reader) {
     return HiveUser(
-      token: reader.read(),
-      userId: reader.read(),
-      firstName: reader.read(),
-      lastName: reader.read(),
-    );
+        token: reader.read(),
+        userId: reader.read(),
+        firstName: reader.read(),
+        lastName: reader.read(),
+        username: reader.read());
   }
 
   @override
@@ -20,5 +20,6 @@ class HiveUserAdapter extends TypeAdapter<HiveUser> {
     writer.write(obj.userId);
     writer.write(obj.firstName);
     writer.write(obj.lastName);
+    writer.write(obj.username);
   }
 }
