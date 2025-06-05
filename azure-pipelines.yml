@@ -29,22 +29,6 @@ steps:
 - script: |
     flutter doctor
   displayName: 'Check Flutter environment'
-
-- task: Cache@2
-  displayName: 'Cache pub packages'
-  inputs:
-    key: 'pub-cache | "$(Agent.OS)" | flutter'
-    restoreKeys: |
-      pub-cache | "$(Agent.OS)"
-    path: ~/.pub-cache
-
-- task: Cache@2
-  displayName: 'Cache Gradle packages'
-  inputs:
-    key: 'gradle | "$(Agent.OS)" | gradle'
-    restoreKeys: |
-      gradle | "$(Agent.OS)"
-    path: ~/.gradle
   
 - script: |
     flutter pub get
