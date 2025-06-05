@@ -3,3 +3,50 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+trigger:
+  branches:
+    include:
+      - main
+      - dev
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  flutterVersion: '3.27.2'  # Or your desired version
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+  displayName: 'Use Python 3.x'
+
+- script: |
+    git clone https://github.com/flutter/flutter.git -b stable --depth 1
+    echo "##vso[task.setvariable variable=PATH]$PATH:$PWD/flutter/bin"
+  displayName: 'Install Flutter SDK'
+
+- script: |
+    flutter doctor
+  displayName: 'Check Flutter environment'
+
+- script: |
+    flutter pub get
+  displayName: 'Install Dependencies'
+
+- script: |
+    flutter build apk --profile --dart-define=ENV=Profile
+  displayName: 'Build Android APK'
+
+- task: CopyFiles@2
+  inputs:
+    contents: '**/build/app/outputs/flutter-apk/app-release.apk'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+  displayName: 'Copy APK to staging'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'FlutterAPK'
+    publishLocation: 'Container'
+  displayName: 'Publish APK Artifact'
