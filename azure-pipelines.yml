@@ -35,8 +35,11 @@ steps:
   displayName: 'Install Dependencies'
 
 - script: |
-    flutter build apk --profile --dart-define=ENV=Profile --split-per-abi
-  displayName: 'Build Android APK'
+    flutter build apk --profile \
+      --dart-define=ENV=Profile \
+      --target-platform android-arm64
+  displayName: 'Build Android APK (ARM64 only)'
+
 
 - task: CopyFiles@2
   inputs:
