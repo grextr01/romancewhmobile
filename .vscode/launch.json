@@ -7,6 +7,12 @@
       "type": "dart",
       "args": ["--dart-define=ENV=Debug"]
     },
+        {
+      "name": "romancewhs Prod (debug mode)",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define=ENV=Profile"]
+    },
     {
       "name": "romancewhs (profile mode)",
       "request": "launch",

@@ -6,8 +6,10 @@ import 'package:romancewhs/main.dart';
 import '../../UX/Theme.dart';
 
 class TransactionsPage extends StatefulWidget {
-  const TransactionsPage({super.key, required this.transactions});
+  const TransactionsPage(
+      {super.key, required this.transactions, required this.trxCode});
   final List transactions;
+  final String trxCode;
 
   @override
   State<TransactionsPage> createState() => _TransactionsPageState();
@@ -55,7 +57,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                 setState(() {});
               },
               decoration: InputDecoration(
-                hintText: 'Cons Billing Number..',
+                hintText: 'Trx Number..',
                 contentPadding: const EdgeInsets.only(left: 12),
                 suffix: IconButton(
                   icon: const Icon(CupertinoIcons.xmark),
@@ -107,6 +109,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                     headerId: transactions[index]
                                         ['TRX_HEADER_ID'],
                                     trxHeader: transactions[index],
+                                    trxCode: widget.trxCode,
                                     onSubmit: (headerId) {
                                       transactions.removeWhere((transaction) =>
                                           transaction['TRX_HEADER_ID']
@@ -122,7 +125,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text.rich(TextSpan(
-                                  text: 'Cons Billing Number: ',
+                                  text: 'Transaction Number: ',
                                   style: const TextStyle(
                                       fontSize: 16.5,
                                       fontWeight: FontWeight.w700),
@@ -135,15 +138,24 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                             fontWeight: FontWeight.normal))
                                   ])),
                               Text.rich(TextSpan(
-                                  text: 'Customer: ',
+                                  text: transactions[index]['CUSTOMER_NAME'] !=
+                                          null
+                                      ? 'Customer: '
+                                      : 'Trsf Number: ',
                                   style: const TextStyle(
                                       fontSize: 16.5,
                                       fontWeight: FontWeight.w700),
                                   children: [
                                     TextSpan(
                                         text: transactions[index]
-                                                ['CUSTOMER_NAME']
-                                            .toString(),
+                                                    ['CUSTOMER_NAME'] !=
+                                                null
+                                            ? transactions[index]
+                                                    ['CUSTOMER_NAME']
+                                                .toString()
+                                            : transactions[index]
+                                                    ['CUSTOMER_NUMBER']
+                                                .toString(),
                                         style: TextStyle(
                                             fontWeight: FontWeight.normal))
                                   ])),

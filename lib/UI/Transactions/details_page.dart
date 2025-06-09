@@ -13,15 +13,17 @@ class DetailsPage extends StatelessWidget {
       {super.key,
       required this.headerId,
       required this.trxHeader,
-      required this.onSubmit});
+      required this.onSubmit,
+      required this.trxCode});
   final int headerId;
   final Map trxHeader;
   final Function(String headerId) onSubmit;
+  final String trxCode;
 
   @override
   Widget build(BuildContext context) {
     // context.read<TrxDetailsCubit>().updateHeaderId(headerId);
-    context.read<TrxDetailsCubit>().getTransactionDetails(headerId);
+    context.read<TrxDetailsCubit>().getTransactionDetails(headerId, trxCode);
     context.read<TrxDetailsCubit>().init(headerId);
     TextEditingController barcodeController = TextEditingController();
     TextEditingController scannedQtyController = TextEditingController();

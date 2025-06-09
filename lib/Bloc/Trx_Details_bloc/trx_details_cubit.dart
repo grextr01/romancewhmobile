@@ -20,11 +20,11 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
     emit(state.copyWith(barcodeFocusNode: focusNode));
   }
 
-  Future<void> getTransactionDetails(int headerId) async {
+  Future<void> getTransactionDetails(int headerId, String trxCode) async {
     emit(state.copyWith(loading: true));
     List<TransactionDetail> transactionDetails = [];
-    var response = await api.getApiToMap(
-        api.apiBaseUrl, '/Warehouse/romance/details/$headerId', 'get');
+    var response = await api.getApiToMap(api.apiBaseUrl,
+        '/Warehouse/romance/details/$headerId?trxCode=$trxCode', 'get');
     if (response['statusCode'] == 200) {
       List data = response['data'];
       transactionDetails =

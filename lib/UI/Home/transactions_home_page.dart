@@ -218,7 +218,9 @@ class TransactionsHomePage extends StatelessWidget {
                           }
                           mainNavigatorKey.currentState!.push(MaterialPageRoute(
                               builder: (_) => TransactionsPage(
-                                  transactions: transactions)));
+                                    transactions: transactions,
+                                    trxCode: state.selectedTrxCode,
+                                  )));
                         }),
                   ],
                 ),

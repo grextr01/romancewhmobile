@@ -9,10 +9,12 @@ class TrxDetailsBlocPage extends StatelessWidget {
       {super.key,
       required this.headerId,
       required this.trxHeader,
-      required this.onSubmit});
+      required this.onSubmit,
+      required this.trxCode});
   final int headerId;
   final Map trxHeader;
   final Function(String headerId) onSubmit;
+  final String trxCode;
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -20,10 +22,10 @@ class TrxDetailsBlocPage extends StatelessWidget {
         TrxDetailsController(headerId: 0),
       ),
       child: DetailsPage(
-        headerId: headerId,
-        trxHeader: trxHeader,
-        onSubmit: onSubmit,
-      ),
+          headerId: headerId,
+          trxHeader: trxHeader,
+          onSubmit: onSubmit,
+          trxCode: trxCode),
     );
   }
 }
