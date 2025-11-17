@@ -7,7 +7,7 @@ class TransactionDetail {
   int quantity;
   int freeQty;
   String barcode;
-  int scannedQty = 0;
+  int scannedQty; 
 
   TransactionDetail({
     required this.lineId,
@@ -18,6 +18,7 @@ class TransactionDetail {
     required this.quantity,
     required this.freeQty,
     required this.barcode,
+    this.scannedQty = 0, 
   });
 
   factory TransactionDetail.fromJson(Map map) {
@@ -29,6 +30,8 @@ class TransactionDetail {
         lineId: map['TRX_LINE_ID'],
         orgCode: map['ORGANIZATION_CODE'],
         orgId: map['ORGANIZATION_ID'],
-        quantity: map['QUANTITY']);
+        quantity: map['QUANTITY'],
+        scannedQty: 0, 
+    );
   }
 }

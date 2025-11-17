@@ -7,21 +7,48 @@ import 'package:romancewhs/UI/Home/Components/item_card.dart';
 import 'package:romancewhs/UX/Theme.dart';
 import 'package:vibration/vibration.dart';
 
-class BarcodePage extends StatelessWidget {
+class BarcodePage extends StatefulWidget {
   const BarcodePage({super.key, required this.leCode});
   final String leCode;
+
+  @override
+  State<BarcodePage> createState() => _BarcodePageState();
+}
+
+class _BarcodePageState extends State<BarcodePage> {
+  late TextEditingController barcodeController;
+  late FocusNode barcodeFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    // FIX: Initialize controllers and focus nodes in initState
+    barcodeController = TextEditingController();
+    barcodeFocusNode = FocusNode();
+    context.read<BarcodeCubit>().setLeCode(widget.leCode);
+    
+    // FIX: Add listener properly
+    barcodeFocusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    // FIX: Dispose controllers and focus nodes to prevent memory leaks
+    barcodeController.dispose();
+    barcodeFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() {
+    if (barcodeFocusNode.hasFocus) {
+      Future.delayed(const Duration(milliseconds: 10), () {
+        SystemChannels.textInput.invokeMethod('TextInput.hide');
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    TextEditingController barcodeController = TextEditingController();
-    FocusNode barcodeFocusNode = FocusNode();
-    context.read<BarcodeCubit>().setLeCode(leCode);
-    barcodeFocusNode.addListener(() {
-      if (barcodeFocusNode.hasFocus) {
-        Future.delayed(Duration(milliseconds: 10), () {
-          SystemChannels.textInput.invokeMethod('TextInput.hide');
-        });
-      }
-    });
     return Scaffold(
         appBar: AppBar(
           elevation: 1,
@@ -37,7 +64,7 @@ class BarcodePage extends StatelessWidget {
         body: BlocBuilder<BarcodeCubit, BarcodeController>(
           builder: (context, state) {
             return Container(
-              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -48,20 +75,20 @@ class BarcodePage extends StatelessWidget {
                       children: [
                         TextSpan(
                             text: state.scannedBarcode,
-                            style: TextStyle(fontWeight: FontWeight.normal))
+                            style: const TextStyle(fontWeight: FontWeight.normal))
                       ])),
-                  Padding(padding: EdgeInsets.only(top: 8)),
-                  Padding(padding: EdgeInsets.only(top: 8)),
+                  const Padding(padding: EdgeInsets.only(top: 8)),
+                  const Padding(padding: EdgeInsets.only(top: 8)),
                   Container(
                     height: 1,
                     width: double.infinity,
                     color: Colors.grey[400],
                   ),
-                  Padding(padding: EdgeInsets.only(top: 8)),
+                  const Padding(padding: EdgeInsets.only(top: 8)),
                   TextField(
                     focusNode: barcodeFocusNode,
                     onTap: () {
-                      Future.delayed(Duration(milliseconds: 10), () {
+                      Future.delayed(const Duration(milliseconds: 10), () {
                         SystemChannels.textInput.invokeMethod('TextInput.hide');
                       });
                     },
@@ -71,52 +98,31 @@ class BarcodePage extends StatelessWidget {
                       bool scanned = await context
                           .read<BarcodeCubit>()
                           .scannBarcode(value);
-                      Future.delayed(Duration(milliseconds: 1000), () {
+                      Future.delayed(const Duration(milliseconds: 1000), () {
                         barcodeController.clear();
                         barcodeFocusNode.requestFocus();
                       });
-                      // context.read()<TrxDetailsCubit>().scanItemBarcode(value);
                       if (!scanned) {
-                        Vibration.vibrate(duration: 500);
+                        await Vibration.vibrate(duration: 500);
                         return;
                       }
-                      Vibration.vibrate(duration: 100);
+                      await Vibration.vibrate(duration: 100);
                     },
                     decoration: InputDecoration(
                       hintText: 'Barcode',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       contentPadding:
-                          EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                          const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
                     ),
                   ),
-                  Padding(padding: EdgeInsets.only(top: 8)),
-                  // Container(
-                  //   decoration: BoxDecoration(
-                  //       border: Border.all(color: Colors.grey[400]!),
-                  //       borderRadius: BorderRadius.circular(5)),
-                  //   padding: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                  //   child: Row(
-                  //     mainAxisAlignment: MainAxisAlignment.center,
-                  //     children: [
-                  //       Text(
-                  //         'Result',
-                  //         style: TextStyle(
-                  //             fontSize: 18, fontWeight: FontWeight.w600),
-                  //       )
-                  //     ],
-                  //   ),
-                  // ),
-                  // Container(
-                  //   height: 1,
-                  //   width: double.infinity,
-                  //   color: Colors.grey[400],
-                  // ),
+                  const Padding(padding: EdgeInsets.only(top: 8)),
                   if (state.items.isNotEmpty)
                     Expanded(
                       child: ListView(
                         children: state.items
                             .map((detail) => Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 10),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 10),
                                   child: ItemCard(item: detail),
                                 ))
                             .toList(),
@@ -127,7 +133,7 @@ class BarcodePage extends StatelessWidget {
                       child: Center(
                         child: Text(
                           'No Items Found',
-                          style: TextStyle(
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                       ),

@@ -12,31 +12,145 @@ import 'package:romancewhs/UI/Home/Components/field_container.dart';
 import 'package:romancewhs/UI/Home/barcode_page.dart';
 import 'package:romancewhs/UI/Transactions/transactions_page.dart';
 import 'package:romancewhs/main.dart';
+import 'package:romancewhs/Bloc/Import_bloc/import_page_bloc.dart'; // ✅ ADD THIS
 import '../../UX/Theme.dart';
 
-class TransactionsHomePage extends StatelessWidget {
+class TransactionsHomePage extends StatefulWidget {
   const TransactionsHomePage({
     super.key,
     required this.legalEntities,
   });
   final List<LegalEntity> legalEntities;
+
+  @override
+  State<TransactionsHomePage> createState() => _TransactionsHomePageState();
+}
+
+class _TransactionsHomePageState extends State<TransactionsHomePage> {
+  late TextEditingController leController;
+  late TextEditingController transactionTypeController;
+  late TextEditingController fromDateController;
+  late TextEditingController toDateController;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize controllers
+    leController = TextEditingController();
+    transactionTypeController = TextEditingController();
+    fromDateController = TextEditingController();
+    toDateController = TextEditingController();
+
+    // ✅ Initialize only if legal entities exist
+    if (widget.legalEntities.isNotEmpty) {
+      String currentDate = DateFormat('dd/MM/yyyy').format(DateTime.now());
+      fromDateController.text = currentDate;
+      toDateController.text = currentDate;
+      leController.text = widget.legalEntities[0].leName;
+      
+      context
+          .read<TransactionsHomeCubit>()
+          .setSelectedEntity(widget.legalEntities[0].leCode);
+      context.read<TransactionsHomeCubit>().setFromDate(currentDate);
+      context.read<TransactionsHomeCubit>().setToDate(currentDate);
+    }
+    
+    context.read<TransactionsHomeCubit>().getTransactionsTypes();
+  }
+
+  @override
+  void dispose() {
+    // Dispose controllers to prevent memory leaks
+    leController.dispose();
+    transactionTypeController.dispose();
+    fromDateController.dispose();
+    toDateController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final TextEditingController leController = TextEditingController();
-    final TextEditingController transactionTypeController =
-        TextEditingController();
-    final TextEditingController fromDateController = TextEditingController();
-    final TextEditingController toDateController = TextEditingController();
-    context.read<TransactionsHomeCubit>().getTransactionsTypes();
-    String currentDate = DateFormat('dd/MM/yyyy').format(DateTime.now());
-    fromDateController.text = currentDate;
-    toDateController.text = currentDate;
-    leController.text = legalEntities[0].leName;
-    context
-        .read<TransactionsHomeCubit>()
-        .setSelectedEntity(legalEntities[0].leCode);
-    context.read<TransactionsHomeCubit>().setFromDate(currentDate);
-    context.read<TransactionsHomeCubit>().setToDate(currentDate);
+    // ✅ Show friendly UI if no legal entities
+    if (widget.legalEntities.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          elevation: 1,
+          backgroundColor: secondaryColor,
+          shadowColor: const Color.fromRGBO(206, 206, 206, 100),
+          title: const Text(
+            'Home',
+            style: TextStyle(
+                fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.business_center_outlined,
+                size: 80,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'No Warehouse Access',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  'Your account does not have access to warehouse management features.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  'Contact your administrator if you need warehouse access.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 40),
+              ElevatedButton.icon(
+                onPressed: () {
+                  mainNavigatorKey.currentState?.pop();
+                },
+                icon: const Icon(Icons.logout),
+                label: const Text('Logout'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: secondaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ✅ Normal warehouse management UI
     return Scaffold(
       appBar: AppBar(
         elevation: 1,
@@ -48,11 +162,25 @@ class TransactionsHomePage extends StatelessWidget {
               fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
         ),
         centerTitle: true,
+        // ✅ ADD IMPORT BUTTON HERE
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.upload_file),
+            tooltip: 'Import Portfolio',
+            onPressed: () {
+              mainNavigatorKey.currentState?.push(
+                MaterialPageRoute(
+                  builder: (_) => const ImportPage(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: BlocBuilder<TransactionsHomeCubit, TransactionsHomeController>(
           builder: (context, state) {
         return Container(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Column(
             children: [
               FieldContainer(
@@ -60,7 +188,7 @@ class TransactionsHomePage extends StatelessWidget {
                   child: TextField(
                     controller: leController,
                     readOnly: true,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: 'Enter LE Code',
                     ),
                     onTap: () {
@@ -68,7 +196,7 @@ class TransactionsHomePage extends StatelessWidget {
                           context: context,
                           builder: (ctx) => BottomSheetSelector(
                               title: 'Select Legal Entity',
-                              items: legalEntities
+                              items: widget.legalEntities
                                   .map((item) => {
                                         'Name': item.leName,
                                         'Value': item.leCode
@@ -79,21 +207,17 @@ class TransactionsHomePage extends StatelessWidget {
                                 context
                                     .read<TransactionsHomeCubit>()
                                     .setSelectedEntity(value);
-                                // leController.text = state.selectedEntity!;
                                 Navigator.pop(context);
                               }));
                     },
-                    onChanged: (value) {
-                      //context.read<HomeCubit>().updateSelectedEntity(value);
-                    },
                   )),
-              Padding(padding: EdgeInsets.only(top: 20)),
+              const Padding(padding: EdgeInsets.only(top: 20)),
               FieldContainer(
                   title: 'Transaction Type: ',
                   child: TextField(
                     controller: transactionTypeController,
                     readOnly: true,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: 'Transaction Type..',
                     ),
                     onTap: () {
@@ -101,13 +225,15 @@ class TransactionsHomePage extends StatelessWidget {
                           context: context,
                           builder: (ctx) => BottomSheetSelector(
                               title: 'Select Transaction Type',
-                              items: state.transactionTypes!
-                                  .map((item) => {
-                                        'Name': item.transactionName,
-                                        'Value': item.transactionCode,
-                                        'TrxCode': item.trxCode
-                                      })
-                                  .toList(),
+                              items: state.transactionTypes != null
+                                  ? state.transactionTypes!
+                                      .map((item) => {
+                                            'Name': item.transactionName,
+                                            'Value': item.transactionCode,
+                                            'TrxCode': item.trxCode
+                                          })
+                                      .toList()
+                                  : [],
                               onTap: (name, value, trxCode) {
                                 transactionTypeController.text = name;
                                 context
@@ -116,22 +242,19 @@ class TransactionsHomePage extends StatelessWidget {
                                 Navigator.pop(context);
                               }));
                     },
-                    onChanged: (value) {
-                      //context.read<HomeCubit>().updateSelectedEntity(value);
-                    },
                   )),
               Visibility(
                   visible:
                       state.selectedType != 'ITM' && state.selectedType != '',
                   child: Column(
                     children: [
-                      Padding(padding: EdgeInsets.only(top: 20)),
+                      const Padding(padding: EdgeInsets.only(top: 20)),
                       FieldContainer(
                           title: 'From Date: ',
                           child: TextField(
                             controller: fromDateController,
                             readOnly: true,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               hintText: 'From Date..',
                             ),
                             onTap: () async {
@@ -148,17 +271,14 @@ class TransactionsHomePage extends StatelessWidget {
                                         .format(selectedDate);
                               }
                             },
-                            onChanged: (value) {
-                              //context.read<HomeCubit>().updateSelectedEntity(value);
-                            },
                           )),
-                      Padding(padding: EdgeInsets.only(top: 20)),
+                      const Padding(padding: EdgeInsets.only(top: 20)),
                       FieldContainer(
                           title: 'To Date: ',
                           child: TextField(
                             controller: toDateController,
                             readOnly: true,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               hintText: 'To Date..',
                             ),
                             onTap: () async {
@@ -173,9 +293,6 @@ class TransactionsHomePage extends StatelessWidget {
                                     .format(selectedDate);
                               }
                             },
-                            onChanged: (value) {
-                              //context.read<HomeCubit>().updateSelectedEntity(value);
-                            },
                           )),
                     ],
                   )),
@@ -186,12 +303,12 @@ class TransactionsHomePage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      padding: EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.only(bottom: 10),
                       child: Visibility(
                         visible: state.error,
                         child: Text(
                           state.errorMessage,
-                          style: TextStyle(color: erroColor, fontSize: 16),
+                          style: const TextStyle(color: erroColor, fontSize: 16),
                           textAlign: TextAlign.center,
                         ),
                       ),

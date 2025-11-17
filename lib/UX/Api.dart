@@ -1,5 +1,3 @@
-// ignore_for_file: depend_on_referenced_packages, prefer_typing_uninitialized_variables
-// ignore_for_file: file_names
 import 'dart:io';
 
 import 'package:http/http.dart' as http;

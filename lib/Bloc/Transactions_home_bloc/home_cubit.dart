@@ -35,70 +35,77 @@ class TransactionsHomeCubit extends Cubit<TransactionsHomeController> {
   }
 
   Future<void> getTransactionsTypes() async {
-    var response =
-        await api.getApiToMap(api.apiBaseUrl, '/TransactionType', 'get');
-    if (response['statusCode'] == 200) {
-      List types = response['data'];
-      // state.transactionTypes = types
-      //     .map((type) => TransactionType(
-      //         transactionCode: type['Transaction_Code'],
-      //         transactionName: type['Transaction_Name'],
-      //         action: type['Action']))
-      //     .toList();
+    try {
+      var response =
+          await api.getApiToMap(api.apiBaseUrl, '/TransactionType', 'get');
+      
+      if (response['statusCode'] == 200) {
+        List types = response['data'] ?? [];
+        emit(state.copyWith(
+            transactionTypes: types
+                .map((type) => TransactionType(
+                    transactionCode: type['Transaction_Code'] ?? '',
+                    transactionName: type['Transaction_Name'] ?? '',
+                    action: type['Action'] ?? 0,
+                    trxCode: type['Trx_code'] ?? ''))
+                .toList(),
+            loading: false,
+            error: false));
+      } else {
+        // FIX: Add proper error handling instead of empty block
+        emit(state.copyWith(
+            error: true,
+            errorMessage: response['message'] ?? 'Failed to load transaction types',
+            loading: false));
+      }
+    } catch (e) {
       emit(state.copyWith(
-          transactionTypes: types
-              .map((type) => TransactionType(
-                  transactionCode: type['Transaction_Code'],
-                  transactionName: type['Transaction_Name'],
-                  action: type['Action'],
-                  trxCode: type['Trx_code']))
-              .toList(),
-          loading: false,
-          error: false));
-    } else {
-      // Handle error
+          error: true,
+          errorMessage: 'Error: ${e.toString()}',
+          loading: false));
     }
-    //emit(state.copyWith(transactionTypes: state.transactionTypes));
   }
 
   Future<List<Map>?> getTransactions() async {
     emit(state.copyWith(loading: true, error: false, errorMessage: ''));
-    String dateFrom = DateFormat('yyyy-MM-dd')
-        .format(DateFormat('dd/MM/yyyy').parse(state.fromDate));
-    String dateTo = DateFormat('yyyy-MM-dd')
-        .format(DateFormat('dd/MM/yyyy').parse(state.toDate));
-    var response = await api.getApiToMap(
-        api.apiBaseUrl,
-        '/Warehouse/romance/header?legalEntityId=${state.selectedEntity}&dateFrom=$dateFrom&dateTo=$dateTo&trxType=${state.selectedType}&trxCode=${state.selectedTrxCode}',
-        'get');
-    if (response['statusCode'] == 200) {
-      List transactions = response['data'];
-      // return [
-      //   {
-      //     'TRX_HEADER_ID': 1231,
-      //     'CONS_BILLING_NUMBER': '123456',
-      //     'CUSTOMER_NUMBER': '123123',
-      //     'CUSTOMER_NAME': 'Customer Name',
-      //     'CURRENCY_CODE': 'USD',
-      //     'TOTAL_AMOUNT': 1000.0,
-      //   }
-      // ];
-      emit(state.copyWith(loading: false, error: false));
-      return transactions
-          .map((transaction) => {
-                'TRX_HEADER_ID': transaction['TRX_HEADER_ID'],
-                'CONS_BILLING_NUMBER': transaction['CONS_BILLING_NUMBER'],
-                'CUSTOMER_NUMBER': transaction['CUSTOMER_NUMBER'],
-                'CUSTOMER_NAME': transaction['CUSTOMER_NAME'],
-                'CURRENCY_CODE': transaction['CURRENCY_CODE'],
-                'TOTAL_AMOUNT': transaction['TOTAL_AMOUNT'],
-              })
-          .toList();
-    } else {
+    
+    try {
+      String dateFrom = DateFormat('yyyy-MM-dd')
+          .format(DateFormat('dd/MM/yyyy').parse(state.fromDate));
+      String dateTo = DateFormat('yyyy-MM-dd')
+          .format(DateFormat('dd/MM/yyyy').parse(state.toDate));
+      
+      var response = await api.getApiToMap(
+          api.apiBaseUrl,
+          '/Warehouse/romance/header?legalEntityId=${state.selectedEntity}&dateFrom=$dateFrom&dateTo=$dateTo&trxType=${state.selectedType}&trxCode=${state.selectedTrxCode}',
+          'get');
+      
+      if (response['statusCode'] == 200) {
+        List transactions = response['data'] ?? [];
+        emit(state.copyWith(loading: false, error: false));
+        
+        return transactions
+            .map((transaction) => {
+                  'TRX_HEADER_ID': transaction['TRX_HEADER_ID'],
+                  'CONS_BILLING_NUMBER': transaction['CONS_BILLING_NUMBER'],
+                  'CUSTOMER_NUMBER': transaction['CUSTOMER_NUMBER'],
+                  'CUSTOMER_NAME': transaction['CUSTOMER_NAME'],
+                  'CURRENCY_CODE': transaction['CURRENCY_CODE'],
+                  'TOTAL_AMOUNT': transaction['TOTAL_AMOUNT'],
+                })
+            .toList();
+      } else {
+        emit(state.copyWith(
+            error: true,
+            loading: false,
+            errorMessage: response['message'] ?? 'Failed to load transactions'));
+        return null;
+      }
+    } catch (e) {
       emit(state.copyWith(
           error: true,
           loading: false,
-          errorMessage: 'Failed to load transactions'));
+          errorMessage: 'Error: ${e.toString()}'));
       return null;
     }
   }
