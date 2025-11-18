@@ -8,7 +8,9 @@ import 'package:romancewhs/Bloc/Login_bloc/login_cubit.dart';
 import 'package:romancewhs/Bloc/Login_bloc/login_page_bloc.dart';
 import 'package:romancewhs/Bloc/Trx_Details_bloc/trx_details_cubit.dart';
 import 'package:romancewhs/Bloc/barcode_bloc/barcode_cubit.dart';
+import 'package:romancewhs/Bloc/cycle_count/cycle_count_cubit.dart';
 import 'package:romancewhs/Controllers/barcode_controller.dart';
+import 'package:romancewhs/Controllers/cycle_count_controller.dart';
 import 'package:romancewhs/Controllers/import_controller.dart';
 import 'package:romancewhs/Controllers/transactions_home_controller.dart';
 import 'package:romancewhs/Controllers/login_controller.dart';
@@ -78,6 +80,10 @@ Future<void> main() async {
       BlocProvider(
           create: (context) => ImportCubit(
                 ImportController(),
+              )),
+      BlocProvider(
+          create: (context) => CycleCountCubit(
+                CycleCountController(),
               )),
     ],
     child: const MyApp(),

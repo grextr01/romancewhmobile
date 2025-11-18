@@ -162,20 +162,7 @@ class _TransactionsHomePageState extends State<TransactionsHomePage> {
               fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white),
         ),
         centerTitle: true,
-        // ✅ ADD IMPORT BUTTON HERE
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.upload_file),
-            tooltip: 'Import Portfolio',
-            onPressed: () {
-              mainNavigatorKey.currentState?.push(
-                MaterialPageRoute(
-                  builder: (_) => const ImportPage(),
-                ),
-              );
-            },
-          ),
-        ],
+        
       ),
       body: BlocBuilder<TransactionsHomeCubit, TransactionsHomeController>(
           builder: (context, state) {

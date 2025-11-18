@@ -3,6 +3,7 @@ import 'package:romancewhs/Models/menu_item.dart';
 import 'package:romancewhs/UI/import_page.dart';
 import 'package:romancewhs/UX/Theme.dart';
 import 'package:romancewhs/main.dart';
+import 'package:romancewhs/Bloc/cycle_count/cycle_count_bloc_page.dart';
 
 class MenuPage extends StatelessWidget {
   const MenuPage({
@@ -101,7 +102,6 @@ class MenuPage extends StatelessWidget {
         break;
       default:
         icon = Icons.widgets;
-        break;
     }
 
     return GestureDetector(
@@ -159,13 +159,27 @@ class MenuPage extends StatelessWidget {
     // Handle different actions
     switch (menu.action) {
       case 'StartCycle':
-        // Navigate to cycle count page
-        _navigateToCycleCount(context, 'start');
+        // Navigate to Cycle Count
+        mainNavigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => const CycleCountBlocPage(
+              cycleType: 'start',
+            ),
+          ),
+        );
         break;
+
       case 'ContinueCycle':
-        // Navigate to cycle count page
-        _navigateToCycleCount(context, 'continue');
+        // Navigate to Cycle Count (continue mode)
+        mainNavigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => const CycleCountBlocPage(
+              cycleType: 'continue',
+            ),
+          ),
+        );
         break;
+
       case 'ImportData':
         mainNavigatorKey.currentState?.push(
           MaterialPageRoute(
@@ -173,61 +187,18 @@ class MenuPage extends StatelessWidget {
           ),
         );
         break;
+
       case 'ExportData':
         // Show export dialog (implement later)
         _showExportDialog(context);
         break;
+
       default:
         // Show generic message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${menu.description} - Coming soon')),
         );
     }
-  }
-
-  void _navigateToCycleCount(BuildContext context, String type) {
-    // Navigate to cycle count page
-    // This is a placeholder - replace with your actual CycleCountPage
-    mainNavigatorKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: Text(
-                type == 'start' ? 'Start Cycle Count' : 'Continue Cycle Count'),
-            backgroundColor: secondaryColor,
-          ),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  type == 'start' ? Icons.play_circle : Icons.loop,
-                  size: 80,
-                  color: secondaryColor,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  type == 'start'
-                      ? 'Start Cycle Count'
-                      : 'Continue Cycle Count',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                ElevatedButton(
-                  onPressed: () {
-                    mainNavigatorKey.currentState?.pop();
-                  },
-                  child: const Text('Go Back'),
-                )
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   void _showExportDialog(BuildContext context) {
