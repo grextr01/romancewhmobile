@@ -5,7 +5,7 @@ import 'package:romancewhs/UI/import_page.dart';
 import 'package:romancewhs/UX/Theme.dart';
 import 'package:romancewhs/main.dart';
 import 'package:romancewhs/Bloc/cycle_count/cycle_count_bloc_page.dart';
-
+import 'package:romancewhs/UI/Components.dart/export_cycle_count_bloc_page.dart';
 class MenuPage extends StatelessWidget {
   const MenuPage({
     super.key,
@@ -187,9 +187,12 @@ class MenuPage extends StatelessWidget {
         );
         break;
 
-      case 'ExportData':
-        // Show export dialog (implement later)
-        _showExportDialog(context);
+case 'ExportData':
+        mainNavigatorKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => const ExportCycleCountBlocPage(),
+          ),
+        );
         break;
 
       default:
@@ -200,20 +203,5 @@ class MenuPage extends StatelessWidget {
     }
   }
 
-  void _showExportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Database'),
-        content: const Text(
-            'Export functionality will be implemented in the next phase.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
+
 }

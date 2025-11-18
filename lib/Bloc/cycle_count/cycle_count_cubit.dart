@@ -6,6 +6,9 @@ import 'package:romancewhs/Models/cycle_count_header.dart';
 import 'package:romancewhs/UX/cycle_count_database.dart';
 import 'package:romancewhs/UX/DatabaseUX/portfolio_database.dart';
 import 'package:romancewhs/Models/Boxes/boxes.dart';
+import 'package:excel/excel.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class CycleCountCubit extends Cubit<CycleCountController> {
   final CycleCountDatabase cycleCountDb = CycleCountDatabase();
@@ -380,6 +383,142 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       emit(state.copyWith(
         error: true,
         errorMessage: 'Error submitting session: ${e.toString()}',
+      ));
+      return false;
+    }
+  }
+
+  /// Export cycle count to Excel file
+  Future<bool> exportCycleCountToExcel(int headerId, String portfolioName) async {
+    try {
+      emit(state.copyWith(loading: true, error: false));
+
+      // Fetch all details for this header
+      final detailsMaps = await cycleCountDb.getDetailsByHeader(headerId);
+
+      if (detailsMaps.isEmpty) {
+        emit(state.copyWith(
+          loading: false,
+          error: true,
+          errorMessage: 'No items found to export for this cycle count',
+        ));
+        return false;
+      }
+
+      // Create new Excel workbook
+      final excel = Excel.createExcel();
+      final sheet = excel['Sheet1'];
+
+      // Define column headers in exact order as specified
+      const List<String> headers = [
+        'Barcode',
+        'ItemCode', 
+        'Description',
+        'Quantity',
+        'Notes',
+        'Timestamp',
+        'IsAutomatic'
+      ];
+
+      // Add headers to first row
+      for (int colIndex = 0; colIndex < headers.length; colIndex++) {
+        sheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: colIndex, rowIndex: 0))
+            .value = TextCellValue(headers[colIndex]);
+      }
+
+      // Add data rows
+      for (int rowIndex = 0; rowIndex < detailsMaps.length; rowIndex++) {
+        final detail = detailsMaps[rowIndex];
+        final dataRowIndex = rowIndex + 1;
+
+        // Column 0: Barcode
+        sheet
+            .cell(CellIndex.indexByColumnRow(
+              columnIndex: 0,
+              rowIndex: dataRowIndex,
+            ))
+            .value = TextCellValue(detail['barcode']?.toString() ?? '');
+
+        // Column 1: ItemCode
+        sheet
+            .cell(CellIndex.indexByColumnRow(
+              columnIndex: 1,
+              rowIndex: dataRowIndex,
+            ))
+            .value = TextCellValue(detail['itemCode']?.toString() ?? '');
+
+        // Column 2: Description
+        sheet
+            .cell(CellIndex.indexByColumnRow(
+              columnIndex: 2,
+              rowIndex: dataRowIndex,
+            ))
+            .value = TextCellValue(detail['description']?.toString() ?? '');
+
+        // Column 3: Quantity
+        sheet
+            .cell(CellIndex.indexByColumnRow(
+              columnIndex: 3,
+              rowIndex: dataRowIndex,
+            ))
+            .value = TextCellValue((detail['quantity'] ?? 0).toString());
+
+        // Column 4: Notes
+        sheet
+            .cell(CellIndex.indexByColumnRow(
+              columnIndex: 4,
+              rowIndex: dataRowIndex,
+            ))
+            .value = TextCellValue(detail['notes']?.toString() ?? '');
+
+        // Column 5: Timestamp
+        sheet
+            .cell(CellIndex.indexByColumnRow(
+              columnIndex: 5,
+              rowIndex: dataRowIndex,
+            ))
+            .value = TextCellValue(detail['timestamp']?.toString() ?? '');
+
+        // Column 6: IsAutomatic (convert 1/0 to Yes/No)
+        final isAutomaticValue = detail['isAutomatic'] == 1 ? 'Yes' : 'No';
+        sheet
+            .cell(CellIndex.indexByColumnRow(
+              columnIndex: 6,
+              rowIndex: dataRowIndex,
+            ))
+            .value = TextCellValue(isAutomaticValue);
+      }
+
+      // Get application documents directory and create filename
+      final directory = await getApplicationDocumentsDirectory();
+      final timestamp = DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now());
+      final safePortfolioName = portfolioName.replaceAll(RegExp(r'[^\w\s-]'), '');
+      final fileName = '${safePortfolioName}_$timestamp.xlsx';
+      final filePath = '${directory.path}/$fileName';
+
+      // Encode and save the Excel file
+      final excelBytes = excel.encode();
+      if (excelBytes != null) {
+        final file = File(filePath);
+        await file.writeAsBytes(excelBytes);
+      } else {
+        throw Exception('Failed to encode Excel file');
+      }
+
+      // Success - emit state
+      emit(state.copyWith(
+        loading: false,
+        error: false,
+        errorMessage: '',
+      ));
+
+      return true;
+    } catch (e) {
+      emit(state.copyWith(
+        loading: false,
+        error: true,
+        errorMessage: 'Error exporting to Excel: ${e.toString()}',
       ));
       return false;
     }

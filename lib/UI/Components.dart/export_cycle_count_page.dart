@@ -381,8 +381,18 @@ class _ExportCycleCountPageState extends State<ExportCycleCountPage> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
+              // FIXED: Get reference to cubit BEFORE closing dialog
+              final cubit = context.read<CycleCountCubit>();
+              final portfolioName = session.portfolio;
+              final sessionId = session.id;
+
+              // Close the dialog
               Navigator.pop(dialogContext);
-              await _exportToExcel(context, session);
+
+              if (sessionId == null) return;
+
+              // Now do the export without touching context
+              await _exportToExcel(cubit, portfolioName, sessionId);
             },
           ),
         ],
@@ -390,10 +400,9 @@ class _ExportCycleCountPageState extends State<ExportCycleCountPage> {
     );
   }
 
+  // FIXED: Updated method signature to accept cubit and data directly
   Future<void> _exportToExcel(
-      BuildContext context, CycleCountHeader session) async {
-    if (session.id == null) return;
-
+      CycleCountCubit cubit, String portfolioName, int sessionId) async {
     // Show loading dialog
     if (!mounted) return;
     showDialog(
@@ -418,10 +427,8 @@ class _ExportCycleCountPageState extends State<ExportCycleCountPage> {
     );
 
     try {
-      // Export the cycle count
-      final cubit = context.read<CycleCountCubit>();
-      final success =
-          await cubit.exportCycleCountToExcel(session.id!, session.portfolio);
+      // Export the cycle count using the passed cubit reference
+      final success = await cubit.exportCycleCountToExcel(sessionId, portfolioName);
 
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
