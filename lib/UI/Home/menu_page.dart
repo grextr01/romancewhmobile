@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:romancewhs/Models/menu_item.dart';
+import 'package:romancewhs/UI/Home/Components/cycle_count/cycle_count_sessions_list_bloc_page.dart';
 import 'package:romancewhs/UI/import_page.dart';
 import 'package:romancewhs/UX/Theme.dart';
 import 'package:romancewhs/main.dart';
@@ -170,12 +171,10 @@ class MenuPage extends StatelessWidget {
         break;
 
       case 'ContinueCycle':
-        // Navigate to Cycle Count (continue mode)
+        // Navigate to Cycle Count Sessions List
         mainNavigatorKey.currentState?.push(
           MaterialPageRoute(
-            builder: (context) => const CycleCountBlocPage(
-              cycleType: 'continue',
-            ),
+            builder: (context) => const CycleCountSessionsListBlocPage(),
           ),
         );
         break;

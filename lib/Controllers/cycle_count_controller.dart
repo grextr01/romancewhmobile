@@ -1,10 +1,12 @@
 import 'package:romancewhs/Models/cycle_count_detail.dart';
+import 'package:romancewhs/Models/cycle_count_header.dart';
 
 class CycleCountController {
   final int? headerId;
   final String portfolioName;
   final List<CycleCountDetail> scannedItems;
   final List<Map<String, dynamic>> pendingPortfolioItems;
+  final List<CycleCountHeader> existingSessions;
   final bool loading;
   final bool error;
   final String errorMessage;
@@ -18,6 +20,7 @@ class CycleCountController {
     this.portfolioName = '',
     this.scannedItems = const [],
     this.pendingPortfolioItems = const [],
+    this.existingSessions = const [],
     this.loading = false,
     this.error = false,
     this.errorMessage = '',
@@ -32,6 +35,7 @@ class CycleCountController {
     String? portfolioName,
     List<CycleCountDetail>? scannedItems,
     List<Map<String, dynamic>>? pendingPortfolioItems,
+    List<CycleCountHeader>? existingSessions,
     bool? loading,
     bool? error,
     String? errorMessage,
@@ -45,6 +49,7 @@ class CycleCountController {
       portfolioName: portfolioName ?? this.portfolioName,
       scannedItems: scannedItems ?? this.scannedItems,
       pendingPortfolioItems: pendingPortfolioItems ?? this.pendingPortfolioItems,
+      existingSessions: existingSessions ?? this.existingSessions,
       loading: loading ?? this.loading,
       error: error ?? this.error,
       errorMessage: errorMessage ?? this.errorMessage,

@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:romancewhs/Controllers/cycle_count_controller.dart';
 import 'package:romancewhs/Models/cycle_count_detail.dart';
+import 'package:romancewhs/Models/cycle_count_header.dart';
 import 'package:romancewhs/UX/cycle_count_database.dart';
 import 'package:romancewhs/UX/DatabaseUX/portfolio_database.dart';
 import 'package:romancewhs/Models/Boxes/boxes.dart';
@@ -11,6 +12,33 @@ class CycleCountCubit extends Cubit<CycleCountController> {
   final PortfolioDatabase portfolioDb = PortfolioDatabase();
 
   CycleCountCubit(super.initialState);
+
+  /// Load all existing cycle count sessions from database
+  Future<void> loadAllSessions() async {
+    try {
+      emit(state.copyWith(loading: true, error: false));
+
+      final headersMaps = await cycleCountDb.getAllHeaders();
+      final sessions = headersMaps
+          .map((map) => CycleCountHeader.fromMap(map))
+          .toList();
+
+      // Sort by timestamp (newest first)
+      sessions.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+      emit(state.copyWith(
+        existingSessions: sessions,
+        loading: false,
+        error: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        loading: false,
+        error: true,
+        errorMessage: 'Error loading sessions: ${e.toString()}',
+      ));
+    }
+  }
 
   /// Initialize a new cycle count session
   Future<int> initializeSession(String portfolioName) async {
