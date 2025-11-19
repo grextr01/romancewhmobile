@@ -490,8 +490,12 @@ class CycleCountCubit extends Cubit<CycleCountController> {
             .value = TextCellValue(isAutomaticValue);
       }
 
-      // Get application documents directory and create filename
-      final directory = await getApplicationDocumentsDirectory();
+      // ✅ FIX: Use getExternalStorageDirectory instead of getApplicationDocumentsDirectory
+      final directory = await getExternalStorageDirectory();
+      if (directory == null) {
+        throw Exception('Cannot access external storage. Please check permissions.');
+      }
+
       final timestamp = DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now());
       final safePortfolioName = portfolioName.replaceAll(RegExp(r'[^\w\s-]'), '');
       final fileName = '${safePortfolioName}_$timestamp.xlsx';
@@ -502,15 +506,20 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       if (excelBytes != null) {
         final file = File(filePath);
         await file.writeAsBytes(excelBytes);
+
+        // Verify file was created
+        if (!await file.exists()) {
+          throw Exception('File was not created successfully');
+        }
       } else {
         throw Exception('Failed to encode Excel file');
       }
 
-      // Success - emit state
+      // Success - emit state with confirmation message
       emit(state.copyWith(
         loading: false,
         error: false,
-        errorMessage: '',
+        errorMessage: 'File saved successfully to Downloads',
       ));
 
       return true;

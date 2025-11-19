@@ -270,29 +270,8 @@ class _ExportCycleCountPageState extends State<ExportCycleCountPage> {
                       ),
                     ],
                   ),
-                  // User ID
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'User',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        session.userId,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
-                        ),
-                      ),
-                    ],
-                  ),
+                  
+                  
                   // Export button
                   ElevatedButton.icon(
                     onPressed: () => _showExportConfirmation(context, session),
