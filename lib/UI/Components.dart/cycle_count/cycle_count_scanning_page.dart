@@ -466,13 +466,13 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                   controller: barcodeController,
                   autofocus: true,
                   onChanged: (value) {
-                    if (value.isNotEmpty && value.endsWith('\n')) {
+                    if (value.isNotEmpty) {
                       _handleBarcodeScanned(value.trim());
                     }
                   },
-                  onSubmitted: (value) {
-                    _handleBarcodeScanned(value.trim());
-                  },
+                  // onSubmitted: (value) {
+                  //   _handleBarcodeScanned(value.trim());
+                  // },
                   onTap: () {
                     _hideKeyboard();
                   },

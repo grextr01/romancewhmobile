@@ -4,7 +4,7 @@
 
   },
   "Profile": {
-    "baseUrl": "https://webapps.fattal.com.lb/romance-whs/api"
+    "baseUrl": "https://webapps.fattal.com.lb/romance-whs/dev/api"
   },
   "Release": {
     "baseUrl": "https://webapps.fattal.com.lb/romance-whs/api"
