@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:romancewhs/Controllers/cycle_count_controller.dart';
@@ -9,13 +12,20 @@ import 'package:romancewhs/Models/Boxes/boxes.dart';
 import 'package:excel/excel.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../../UX/Database.dart';
 
 class CycleCountCubit extends Cubit<CycleCountController> {
-  final CycleCountDatabase cycleCountDb = CycleCountDatabase();
-  final PortfolioDatabase portfolioDb = PortfolioDatabase();
+  final dbConn cycleCountDb = dbConn();
+  final dbConn portfolioDb = dbConn();
+  // final PortfolioDatabase portfolioDb = PortfolioDatabase();
 
   CycleCountCubit(super.initialState);
 
+  bool isQuantityAutomatic() {
+    return state.automaticQuantityMode;
+  }
   /// Load all existing cycle count sessions from database
   Future<void> loadAllSessions() async {
     try {
@@ -137,7 +147,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
   Future<bool> scanBarcode(
     String barcode, {
     String? manualDescription,
-    bool isAutomatic = true,
+    String isAutomatic = 'A',
   }) async {
     try {
       if (state.headerId == null) {
@@ -175,7 +185,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         'description': description,
         'quantity': state.automaticQuantityMode ? 1 : state.scannedQty,
         'timestamp': timestamp,
-        'isAutomatic': isAutomatic ? 1 : 0,
+        'isAutomatic': isAutomatic,
       };
 
       final detailId = await cycleCountDb.insertDetail(detailMap);
@@ -309,7 +319,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
   /// Load existing session
   Future<bool> loadSession(int headerId) async {
     try {
-      emit(state.copyWith(loading: true));
+      //emit(state.copyWith(loading: true));
 
       final header = await cycleCountDb.getHeader(headerId);
       if (header == null) {
@@ -480,8 +490,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
             ))
             .value = TextCellValue(detail['timestamp']?.toString() ?? '');
 
-        // Column 6: IsAutomatic (convert 1/0 to Yes/No)
-        final isAutomaticValue = detail['isAutomatic'] == 1 ? 'Yes' : 'No';
+        final isAutomaticValue = detail['isAutomatic']?.toString()?? 'A';
         sheet
             .cell(CellIndex.indexByColumnRow(
               columnIndex: 6,
@@ -491,7 +500,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       }
 
       // ✅ FIX: Use getExternalStorageDirectory instead of getApplicationDocumentsDirectory
-      final directory = await getExternalStorageDirectory();
+      final directory = await getDownloadsDirectory();
       if (directory == null) {
         throw Exception('Cannot access external storage. Please check permissions.');
       }
@@ -500,20 +509,31 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       final safePortfolioName = portfolioName.replaceAll(RegExp(r'[^\w\s-]'), '');
       final fileName = '${safePortfolioName}_$timestamp.xlsx';
       final filePath = '${directory.path}/$fileName';
+try{
 
-      // Encode and save the Excel file
       final excelBytes = excel.encode();
-      if (excelBytes != null) {
-        final file = File(filePath);
-        await file.writeAsBytes(excelBytes);
+      final excelBytest = Uint8List.fromList(excelBytes!);
+      final path = await FilePicker.platform.saveFile(
+    dialogTitle: 'Save your file',
+    fileName: fileName,
+    bytes: excelBytest
+  );
+}
+catch(e){
+  throw Exception("error saving file: $e");
+}
+      // Encode and save the Excel file
+      // if (excelBytes != null) {
+      //   final file = File(path!);
+      //   //await file.writeAsBytes(excelBytes);
 
-        // Verify file was created
-        if (!await file.exists()) {
-          throw Exception('File was not created successfully');
-        }
-      } else {
-        throw Exception('Failed to encode Excel file');
-      }
+      //   // Verify file was created
+      //   if (!await file.exists()) {
+      //     throw Exception('File was not created successfully');
+      //   }
+      // } else {
+      //   throw Exception('Failed to encode Excel file');
+      // }
 
       // Success - emit state with confirmation message
       emit(state.copyWith(

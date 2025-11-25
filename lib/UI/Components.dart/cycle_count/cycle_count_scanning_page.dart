@@ -98,7 +98,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
   Future<void> _handleBarcodeScanned(String barcode) async {
     if (barcode.isEmpty) return;
 
-    await Vibration.vibrate(duration: 100);
+    //await Vibration.vibrate(duration: 100);
 
     final results = await cubit.findItemByBarcode(barcode);
 
@@ -107,7 +107,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
 
     if (exactMatches.isEmpty) {
       // No exact match found - show manual entry dialog
-      await Vibration.vibrate(duration: 500);
+      //await Vibration.vibrate(duration: 300);
       _showManualDescriptionDialog(barcode);
       return;
     }
@@ -119,7 +119,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
         // Automatic ON - add directly with qty 1
         bool success = await cubit.scanBarcode(
           barcode,
-          isAutomatic: true,
+          isAutomatic: 'A',
         );
 
         if (success) {
@@ -188,7 +188,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
 
               bool success = await cubit.scanBarcode(
                 barcode,
-                isAutomatic: false,
+                isAutomatic: 'Q',
               );
 
               if (success) {
@@ -221,93 +221,99 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Item Not Found'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Barcode: $barcode'),
-            const SizedBox(height: 16),
-            const Text('This barcode was not found in the portfolio.'),
-            const SizedBox(height: 16),
-            const Text('Enter item description:'),
-            const SizedBox(height: 8),
-            TextField(
-              controller: descriptionController,
-              decoration: InputDecoration(
-                hintText: 'Item description',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+        content: Container(
+          height: context.read<CycleCountCubit>().isQuantityAutomatic() ? 180: 240 ,
+          child: ListView(
+            //mainAxisSize: MainAxisSize.min,
+            //crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Barcode: $barcode'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  hintText: 'Item description',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
+                autofocus: true,
               ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            const Text('Enter quantity:'),
-            const SizedBox(height: 8),
-            TextField(
-              controller: quantityController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: 'Quantity',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+              const SizedBox(height: 12),
+              
+              Visibility(
+                visible: !context.read<CycleCountCubit>().isQuantityAutomatic(),
+                child: TextField(
+                controller: quantityController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Quantity',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ),
+              ),),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                barcodeController.clear();
+                barcodeFocusNode.requestFocus();
+              },
+              child: const Text('Skip'),
             ),
-          ],
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: secondaryColor,
+              ),
+              onPressed: () async {
+                final description = descriptionController.text.trim();
+                final qty = int.tryParse(quantityController.text) ?? 1;
+                
+                if (description.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a description')),
+                  );
+                  return;
+                }
+          
+                Navigator.pop(dialogContext);
+          
+                bool success = await cubit.scanBarcode(
+                  barcode,
+                  manualDescription: description,
+                  isAutomatic: context.read<CycleCountCubit>().isQuantityAutomatic() ? 'D' : 'QD',
+                );
+          
+                if (success) {
+                  // Update the quantity
+                  if (cubit.state.scannedItems.isNotEmpty) {
+                    final lastItem = cubit.state.scannedItems.last;
+                    await cubit.updateItemQuantity(lastItem.detailId!, qty);
+                  }
+                  
+                  //await Vibration.vibrate(duration: 100);
+                  barcodeController.clear();
+                  descriptionController.clear();
+                  quantityController.clear();
+                  _scrollToNewestItem();
+                  barcodeFocusNode.requestFocus();
+                }
+              },
+              child: const Text(
+                'Add Item',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),],
+              )
+            ],
+          ),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              barcodeController.clear();
-              barcodeFocusNode.requestFocus();
-            },
-            child: const Text('Skip'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: secondaryColor,
-            ),
-            onPressed: () async {
-              final description = descriptionController.text.trim();
-              final qty = int.tryParse(quantityController.text) ?? 1;
-              
-              if (description.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a description')),
-                );
-                return;
-              }
-
-              Navigator.pop(dialogContext);
-
-              bool success = await cubit.scanBarcode(
-                barcode,
-                manualDescription: description,
-                isAutomatic: false,
-              );
-
-              if (success) {
-                // Update the quantity
-                if (cubit.state.scannedItems.isNotEmpty) {
-                  final lastItem = cubit.state.scannedItems.last;
-                  await cubit.updateItemQuantity(lastItem.detailId!, qty);
-                }
-                
-                await Vibration.vibrate(duration: 100);
-                barcodeController.clear();
-                descriptionController.clear();
-                quantityController.clear();
-                _scrollToNewestItem();
-                barcodeFocusNode.requestFocus();
-              }
-            },
-            child: const Text(
-              'Add Item',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
+          
         ],
       ),
     );
@@ -347,7 +353,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                               // Automatic ON - add directly with qty 1
                               cubit.scanBarcode(
                                 barcode,
-                                isAutomatic: true,
+                                isAutomatic: 'A',
                               );
                               barcodeController.clear();
                               _scrollToNewestItem();
@@ -768,7 +774,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                               ),
                                             ),
                                           ),
-                                          if (!item.isAutomatic)
+                                          if (item.isAutomatic != 'A')
                                             Container(
                                               margin: const EdgeInsets.only(left: 8),
                                               padding: const EdgeInsets.symmetric(

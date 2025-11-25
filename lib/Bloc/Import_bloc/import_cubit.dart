@@ -5,6 +5,7 @@ import 'package:excel/excel.dart';
 import 'dart:io';
 import 'package:romancewhs/Controllers/import_controller.dart';
 import 'package:romancewhs/Models/portfolio.dart';
+import 'package:romancewhs/UX/Database.dart';
 import 'package:romancewhs/UX/DatabaseUX/portfolio_database.dart';
 
 // Top-level function for background processing
@@ -71,7 +72,7 @@ List<Portfolio> _parseExcelInBackground(List<int> bytes) {
 class ImportCubit extends Cubit<ImportController> {
   ImportCubit(super.initialState);
 
-  final portfolioDb = PortfolioDatabase();
+  final portfolioDb = dbConn();
 
   /// Import portfolios from Excel file
   Future<bool> importFromExcel(File excelFile) async {

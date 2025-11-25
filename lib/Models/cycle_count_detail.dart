@@ -8,7 +8,7 @@ class CycleCountDetail {
   final String? notes;
   final String? picture;
   final String timestamp;
-  final bool isAutomatic;
+  final String isAutomatic;
 
   CycleCountDetail({
     this.detailId,
@@ -35,7 +35,7 @@ class CycleCountDetail {
       'notes': notes,
       'picture': picture,
       'timestamp': timestamp,
-      'isAutomatic': isAutomatic ? 1 : 0,
+      'isAutomatic': isAutomatic,
     };
   }
 
@@ -51,7 +51,7 @@ class CycleCountDetail {
       notes: map['notes'] as String?,
       picture: map['picture'] as String?,
       timestamp: map['timestamp'] as String,
-      isAutomatic: (map['isAutomatic'] as int?) == 1,
+      isAutomatic: map['isAutomatic'] as String,
     );
   }
 

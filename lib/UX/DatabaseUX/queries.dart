@@ -1,33 +1,37 @@
 String get createPortfolioTable {
-  return 'CREATE TABLE "Portfolio" ('
-      '"barcode" TEXT NOT NULL,'
-      '"ItemCode" TEXT NOT NULL,'
-      '"Description" TEXT NOT NULL);';
+  return '''CREATE TABLE portfolio(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        barcode TEXT NOT NULL,
+        itemCode TEXT NOT NULL,
+        description TEXT NOT NULL,
+        createdAt TEXT
+        ,UNIQUE ("barcode", "ItemCode"));''';
 }
 
 String get createCycleCountHeader {
-  return 'CREATE TABLE "CycleCountHeader"('
-      '"Id" INTEGER NOT NULL UNIQUE,'
-      '"Portfolio" TEXT,'
-      '"Text" TEXT,'
-      '"timestamp" TEXT,'
-      '"userId" INT,'
-      'PRIMARY KEY("Id" AUTOINCREMENT));';
+  return '''CREATE TABLE cycle_count_header(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        portfolio TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        totalItems INTEGER DEFAULT 0,
+        scannedItems INTEGER DEFAULT 0
+      )''';
 }
 
 String get createCycleCountDetails {
-  return 'CREATE TABLE "CycleCountDetails"('
-      '"detailId" INTEGER NOT NULL UNIQUE,'
-      '"HeaderId" INTEGER NOT NULL,'
-      '"barcode" TEXT NOT NULL,'
-      '"ItemCode" TEXT NOT NULL,'
-      '"Description" TEXT NOT NULL,'
-      '"quantity" INTEGER NOT NULL,'
-      '"notes" TEXT,'
-      '"picture" TEXT,'
-      '"timestamp" TEXT,'
-      '"isAutomatic" BOOLEAN,'
-      'PRIMARY KEY("detailId" AUTOINCREMENT),'
-      'FOREIGN KEY("HeaderId") REFERENCES "CycleCountHeader"("Id")'
-      ');';
+  return '''CREATE TABLE cycle_count_details(
+        detailId INTEGER PRIMARY KEY AUTOINCREMENT,
+        headerId INTEGER NOT NULL,
+        barcode TEXT NOT NULL,
+        itemCode TEXT NOT NULL,
+        description TEXT NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 0,
+        notes TEXT,
+        picture TEXT,
+        timestamp TEXT NOT NULL,
+        isAutomatic INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY(headerId) REFERENCES cycle_count_header(id)
+      )
+''';
 }
