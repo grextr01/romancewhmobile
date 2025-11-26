@@ -9,64 +9,206 @@ import 'package:romancewhs/Models/Hive/hive_user.dart';
 import 'package:romancewhs/Models/legal_entity.dart';
 import 'package:romancewhs/Models/menu.dart';
 import 'package:romancewhs/UX/Api.dart';
+import 'package:romancewhs/UX/cacheHelper.dart';
+import 'dart:convert';
 import '../../main.dart';
 
 class LoginCubit extends Cubit<LoginController> {
   LoginCubit(super.initialState);
 
   final _api = API();
-void togglePasswordVisibility() {
+
+  void togglePasswordVisibility() {
     emit(state.copyWith(obscurePassword: !state.obscurePassword));
   }
+
   Future<void> login(String username, String password) async {
     // Start loading
     emit(state.copyWith(loading: true, error: false, errorMessage: ''));
 
-    var response = await _api.getApiToMap(_api.apiBaseUrl, '/auth/login', 'post', {
-      'username': username,
-      'password': password,
-    });
+    try {
+      // Try to login with API first
+      var response = await _api.getApiToMap(_api.apiBaseUrl, '/auth/login', 'post', {
+        'username': username,
+        'password': password,
+      });
 
-    if (response['statusCode'] == 200) {
-      // Handle legal entities
-      List entities = response['legalEntities'] ?? [];
-      List<LegalEntity> legalEntities = entities
-          .map((entity) => LegalEntity(
-              leCode: entity['leCode'] ?? '',
-              leName: entity['leName'] ?? 'Unknown'))
-          .toList();
+      // Cast response to Map<String, dynamic>
+      final Map<String, dynamic> apiResponse = Map<String, dynamic>.from(response);
 
-      // ✅ Handle menus from response
-      List menuItems = response['menus'] ?? [];
-      List<Menu> menus = menuItems.map((menu) => Menu.fromJson(menu)).toList();
+      if (apiResponse['statusCode'] == 200) {
+        // Handle legal entities
+        List entities = apiResponse['legalEntities'] ?? [];
+        List<LegalEntity> legalEntities = entities
+            .map((entity) => LegalEntity(
+                leCode: (entity['leCode'] ?? '').toString(),
+                leName: (entity['leName'] ?? 'Unknown').toString()))
+            .toList();
 
-      // Save user info
-      var hiveUser = HiveUser(
-          token: response['token'],
-          firstName: response['firstName'] ?? '',
-          lastName: response['lastName'] ?? '',
-          userId: response['userID'].toString(),
-          username: username);
+        // Handle menus from response
+        List menuItems = apiResponse['menus'] ?? [];
+        List<Menu> menus = menuItems.map((menu) => Menu.fromJson(menu as Map<String, dynamic>)).toList();
 
-      userBox.put('activeUser', hiveUser);
+        // Save user info to Hive
+        var hiveUser = HiveUser(
+            token: apiResponse['token']?.toString() ?? '',
+            firstName: apiResponse['firstName']?.toString() ?? '',
+            lastName: apiResponse['lastName']?.toString() ?? '',
+            userId: apiResponse['userID']?.toString() ?? '',
+            username: username);
 
-      // Emit success
-      emit(state.copyWith(
+        userBox.put('activeUser', hiveUser);
+
+        // Cache credentials and data for offline login
+        await _cacheLoginData(username, password, apiResponse, legalEntities, menus);
+
+        // Emit success
+        emit(state.copyWith(
+            loading: false,
+            token: apiResponse['token']?.toString(),
+            legalEntities: legalEntities,
+            menus: menus,
+            error: false));
+
+        // NAVIGATION LOGIC
+        _navigateBasedOnMenus(menus, legalEntities, apiResponse['firstName']?.toString() ?? username);
+           
+      } else {
+        // API failed - try offline login
+        await _tryOfflineLogin(username, password);
+      }
+    } catch (e) {
+      // Network error - try offline login
+      print('API Error: ${e.toString()}');
+      await _tryOfflineLogin(username, password);
+    }
+  }
+
+  /// Cache login data for offline access
+  Future<void> _cacheLoginData(
+    String username,
+    String password,
+    Map<String, dynamic> response,
+    List<LegalEntity> legalEntities,
+    List<Menu> menus,
+  ) async {
+    try {
+      await CacheData.setData('cached_username', username);
+      await CacheData.setData('cached_password', password);
+      await CacheData.setData('cached_token', response['token']?.toString() ?? '');
+      await CacheData.setData('cached_firstName', response['firstName']?.toString() ?? '');
+      await CacheData.setData('cached_lastName', response['lastName']?.toString() ?? '');
+      await CacheData.setData('cached_userID', response['userID']?.toString() ?? '');
+     
+      // Cache menus as JSON string
+      String menusJson = jsonEncode(menus.map((m) => {
+        'menuId': m.menuId,
+        'description': m.description,
+        'route': m.route,
+        'action': m.action,
+      }).toList());
+      await CacheData.setData('cached_menus', menusJson);
+     
+      // Cache legal entities as JSON string
+      String entitiesJson = jsonEncode(legalEntities.map((e) => {
+        'leCode': e.leCode,
+        'leName': e.leName,
+      }).toList());
+      await CacheData.setData('cached_legalEntities', entitiesJson);
+     
+      print('✓ Login data cached successfully');
+    } catch (e) {
+      print('✗ Error caching login data: $e');
+    }
+  }
+
+  /// Attempt offline login using cached credentials
+  Future<void> _tryOfflineLogin(String username, String password) async {
+    try {
+      final cachedUsername = CacheData.getData('cached_username');
+      final cachedPassword = CacheData.getData('cached_password');
+      final cachedToken = CacheData.getData('cached_token');
+      final cachedFirstName = CacheData.getData('cached_firstName') ?? '';
+      final cachedLastName = CacheData.getData('cached_lastName') ?? '';
+      final cachedUserID = CacheData.getData('cached_userID') ?? '';
+
+      // Verify credentials match
+      if (cachedUsername != null &&
+          cachedPassword != null &&
+          cachedUsername == username &&
+          cachedPassword == password &&
+          cachedToken != null) {
+       
+        // Restore cached user data
+        var hiveUser = HiveUser(
+          token: cachedToken.toString(),
+          firstName: cachedFirstName.toString(),
+          lastName: cachedLastName.toString(),
+          userId: cachedUserID.toString(),
+          username: username,
+        );
+       
+        userBox.put('activeUser', hiveUser);
+
+        // Retrieve cached menus and entities
+        String? menusJson = CacheData.getData('cached_menus');
+        String? entitiesJson = CacheData.getData('cached_legalEntities');
+       
+        List<Menu> menus = [];
+        List<LegalEntity> legalEntities = [];
+       
+        if (menusJson != null) {
+          try {
+            List<dynamic> decoded = jsonDecode(menusJson.toString());
+            menus = decoded.map((item) => Menu(
+              menuId: item['menuId'] as int,
+              description: item['description'] as String,
+              route: item['route'] as String?,
+              action: item['action'] as String,
+            )).toList();
+          } catch (e) {
+            print('Error decoding menus: $e');
+          }
+        }
+       
+        if (entitiesJson != null) {
+          try {
+            List<dynamic> decoded = jsonDecode(entitiesJson.toString());
+            legalEntities = decoded.map((item) => LegalEntity(
+              leCode: item['leCode'] as String,
+              leName: item['leName'] as String,
+            )).toList();
+          } catch (e) {
+            print('Error decoding entities: $e');
+          }
+        }
+
+        // Emit success with offline indicator
+        emit(state.copyWith(
           loading: false,
-          token: response['token'],
+          token: cachedToken.toString(),
           legalEntities: legalEntities,
-          menus: menus, // Save menus in state
-          error: false));
+          menus: menus,
+          error: false,
+          errorMessage: 'Logged in offline mode',
+        ));
 
-      // ✅ NAVIGATION LOGIC:
-      _navigateBasedOnMenus(menus, legalEntities, response['firstName'] ?? username);
-          
-    } else {
-      // Handle login failure
-      emit(state.copyWith(
+        // Navigate
+        _navigateBasedOnMenus(menus, legalEntities, cachedFirstName.toString() ?? username);
+      } else {
+        // Credentials don't match or no cached data
+        emit(state.copyWith(
           error: true,
-          errorMessage: response['message'] ?? 'Login failed. Please try again.',
-          loading: false));
+          errorMessage: 'Login failed. No internet connection and no cached credentials found.',
+          loading: false,
+        ));
+      }
+    } catch (e) {
+      emit(state.copyWith(
+        error: true,
+        errorMessage: 'Login failed: ${e.toString()}',
+        loading: false,
+      ));
     }
   }
 
@@ -184,7 +326,14 @@ void togglePasswordVisibility() {
   }
 
   Future<void> logout() async {
+    // Clear active user from Hive
     await userBox.delete('activeUser');
+   
+    // Clear cache (optional - you might want to keep it for offline login)
+    // await CacheData.deleteItem('cached_username');
+    // await CacheData.deleteItem('cached_password');
+    // etc.
+   
     emit(LoginController()); // Reset state
     mainNavigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => LoginPageBloc()),

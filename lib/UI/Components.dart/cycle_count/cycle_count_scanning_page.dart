@@ -554,7 +554,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${state.totalScannedItems}',
+                            '${state.scannedItems.length}',
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w700,
@@ -580,7 +580,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${state.totalScannedQuantity}',
+                            '${state.scannedItems.fold<int>(0, (sum, item) => sum + item.quantity)}',
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.w700,

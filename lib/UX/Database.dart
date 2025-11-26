@@ -30,7 +30,7 @@ class dbConn {
   }
 
   _onCreateDb(Database db, int newVersion) async {
-    //await db.execute(createPortfolioTable);
+    await db.execute(createPortfolioTable);
      await db.execute(createCycleCountHeader);
     await db.execute(createCycleCountDetails);
     // await _db.execute(createPropertyImagesTable);
@@ -39,8 +39,8 @@ class dbConn {
 
   _onUpgradeDb(Database db, int oldVersion, int newVersion) async {
     //await db.execute("DROP TABLE IF EXISTS Portfolio");
-     await db.execute("DROP TABLE IF EXISTS CycleCountHeader");
-    await db.execute("DROP TABLE IF EXISTS CycleCountDetails");
+     //await db.execute("DROP TABLE IF EXISTS CycleCountHeader");
+    // await db.execute("DROP TABLE IF EXISTS CycleCountDetails");
     _onCreateDb(db, newVersion);
   }
 
@@ -129,8 +129,8 @@ class dbConn {
     final _db = await db;
     final List<Map<String, dynamic>> maps = await _db.query(
       'portfolio',
-      where: 'barcode LIKE ?',
-      whereArgs: ['%$barcode%'],
+      where: 'barcode = ?',
+      whereArgs: [barcode],
     );
     return List.generate(maps.length, (i) => Portfolio.fromMap(maps[i]));
   }
@@ -140,8 +140,8 @@ class dbConn {
     final _db = await db;
     final List<Map<String, dynamic>> maps = await _db.query(
       'portfolio',
-      where: 'itemCode LIKE ?',
-      whereArgs: ['%$itemCode%'],
+      where: 'itemCode = ?',
+      whereArgs: [itemCode],
     );
     return List.generate(maps.length, (i) => Portfolio.fromMap(maps[i]));
   }

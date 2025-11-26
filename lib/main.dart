@@ -19,6 +19,7 @@ import 'package:romancewhs/Models/Boxes/boxes.dart';
 import 'package:romancewhs/Models/Hive/hive_user.dart';
 import 'package:romancewhs/Models/menu.dart';
 import 'package:romancewhs/UX/Api.dart';
+import 'package:romancewhs/UX/cacheHelper.dart';
 import 'package:romancewhs/UX/global.dart';
 import 'package:romancewhs/UX/update.dart';
 import 'package:romancewhs/Bloc/Menu_bloc/menu_page_bloc.dart';
@@ -30,6 +31,7 @@ final mainNavigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
+  CacheData.cacheInitialization();
   const env = String.fromEnvironment('ENV', defaultValue: 'Debug');
   final config = await EnvConfig.load(env);
   baseUrl = config.baseUrl;

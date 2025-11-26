@@ -225,7 +225,7 @@ class _CycleCountSessionsListPageState
                     child: Column(
                       children: [
                         Text(
-                          '${session.scannedItems}',
+                          '${session.totalItems}',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
