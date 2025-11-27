@@ -269,7 +269,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         barcode: barcode,
         itemCode: itemCode,
         description: description,
-        quantity: state.automaticQuantityMode ? quantity : state.scannedQty,
+        quantity: quantity, // ✅ FIX: Use the quantity parameter directly
         isAutomatic: isAutomatic,
       );
     } catch (e) {

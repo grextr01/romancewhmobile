@@ -194,7 +194,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'description:',
+                    'Description:',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -216,6 +216,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
             TextField(
               controller: qtyController,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Quantity',
@@ -289,6 +290,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
             TextField(
               controller: qtyController,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               autofocus: true,
               decoration: InputDecoration(
                 hintText: 'Quantity',
@@ -413,6 +415,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                     TextField(
                       controller: quantityController,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         hintText: 'Quantity',
                         border: OutlineInputBorder(
@@ -1177,6 +1180,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
             TextField(
               controller: qtyController,
               keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(
                 hintText: 'Enter quantity',
                 border: OutlineInputBorder(
