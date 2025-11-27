@@ -115,6 +115,33 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     final exactMatches = results.where((item) => item['barcode'] == barcode).toList();
 
     if (exactMatches.isEmpty) {
+      // Check if we have a cached description for this barcode
+      final cachedDescription = cubit.getDescriptionFromCache(barcode);
+
+      if (cachedDescription != null) {
+        // We have a cached description! Use it automatically
+        final state = cubit.state;
+        if (state.automaticQuantityMode) {
+          bool success = await cubit.scanBarcode(
+            barcode,
+            manualDescription: cachedDescription,
+            isAutomatic: 'D', // D for Description (from cache)
+          );
+
+          if (success) {
+            await Vibration.vibrate(duration: 100);
+            barcodeController.clear();
+            _scrollToNewestItem();
+            barcodeFocusNode.requestFocus();
+          }
+        } else {
+          // Ask for quantity but use cached description
+          _showQuantityPopupWithCachedDescription(barcode, cachedDescription);
+        }
+        return;
+      }
+
+      // No cached description - show manual entry dialog
       _showManualDescriptionDialog(barcode);
       return;
     }
@@ -139,6 +166,106 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     } else {
       _showMultipleMatchDialog(barcode, exactMatches);
     }
+  }
+
+  void _showQuantityPopupWithCachedDescription(
+      String barcode, String cachedDescription) {
+    final qtyController = TextEditingController(text: '1');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Enter Quantity'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Barcode: $barcode'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'description:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    cachedDescription,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: qtyController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Quantity',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              barcodeController.clear();
+              barcodeFocusNode.requestFocus();
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: secondaryColor,
+            ),
+            onPressed: () async {
+              final qty = int.tryParse(qtyController.text) ?? 1;
+              Navigator.pop(dialogContext);
+
+              bool success = await cubit.scanBarcode(
+                barcode,
+                manualDescription: cachedDescription,
+                quantity: qty,
+                isAutomatic: 'D', // D for cached Description
+              );
+
+              if (success) {
+                await Vibration.vibrate(duration: 100);
+                barcodeController.clear();
+                quantityController.clear();
+                _scrollToNewestItem();
+                barcodeFocusNode.requestFocus();
+              }
+            },
+            child: const Text(
+              'Add',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showQuantityPopup(String barcode, Map<String, dynamic> item) {
@@ -226,6 +353,14 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
             children: [
               Text('Barcode: $barcode'),
               const SizedBox(height: 16),
+              const Text(
+                'Enter Item Description:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
               TextField(
                 controller: descriptionController,
                 textInputAction: TextInputAction.next,
@@ -238,20 +373,56 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 autofocus: true,
               ),
               const SizedBox(height: 12),
-              Visibility(
-                visible: !cubit.isQuantityAutomatic(),
-                child: TextField(
-                  controller: quantityController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Quantity',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.amber[300]!),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.amber, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This description will be remembered for this barcode',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.amber,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              Visibility(
+                visible: !cubit.isQuantityAutomatic(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Quantity:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Quantity',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -262,7 +433,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
               barcodeController.clear();
               barcodeFocusNode.requestFocus();
             },
-            child: const Text('Skip'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -280,6 +451,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
               }
 
               Navigator.pop(dialogContext);
+
+              // Cache the description for future scans
+              cubit.cacheDescription(barcode, description);
 
               bool success = await cubit.scanBarcode(
                 barcode,
@@ -771,7 +945,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                       CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          item.itemCode,
+                                          item.itemCode.isEmpty
+                                              ? ''
+                                              : item.itemCode,
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 14,
@@ -877,9 +1053,12 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                           borderRadius:
                                           BorderRadius.circular(4),
                                         ),
-                                        child: const Text(
-                                          'Manual',
-                                          style: TextStyle(
+                                        child: Text(
+                                          item.isAutomatic == 'D' ||
+                                              item.isAutomatic == 'QD'
+                                              ? 'Manual'
+                                              : 'Manual',
+                                          style: const TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.w600,
                                             color: Colors.orange,
@@ -986,7 +1165,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Item: ${item.itemCode}',
+              'Item: ${item.itemCode.isEmpty ? "Manual Entry" : item.itemCode}',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -1040,7 +1219,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Item: ${item.itemCode}',
+              'Item: ${item.itemCode.isEmpty ? "Manual Entry" : item.itemCode}',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),

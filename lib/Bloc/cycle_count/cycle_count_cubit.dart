@@ -20,6 +20,9 @@ class CycleCountCubit extends Cubit<CycleCountController> {
   final dbConn cycleCountDb = dbConn();
   final dbConn portfolioDb = dbConn();
 
+  /// Cache for manually entered descriptions (barcode -> description)
+  final Map<String, String> _manualDescriptionCache = {};
+
   CycleCountCubit(super.initialState);
 
   bool isQuantityAutomatic() {
@@ -48,6 +51,21 @@ class CycleCountCubit extends Cubit<CycleCountController> {
   /// Toggle automatic merge mode
   void toggleAutomaticMerge(bool value) {
     emit(state.copyWith(automaticMergeMode: value));
+  }
+
+  /// Get previously entered description for a barcode (from cache)
+  String? getCachedDescription(String barcode) {
+    return _manualDescriptionCache[barcode];
+  }
+
+  /// Store manually entered description in cache
+  void cacheDescription(String barcode, String description) {
+    _manualDescriptionCache[barcode] = description;
+  }
+
+  /// Clear the cache (useful when starting new session)
+  void clearDescriptionCache() {
+    _manualDescriptionCache.clear();
   }
 
   /// Load all existing cycle count sessions from database
@@ -81,6 +99,9 @@ class CycleCountCubit extends Cubit<CycleCountController> {
   Future<int> initializeSession(String portfolioName) async {
     try {
       emit(state.copyWith(loading: true, error: false));
+
+      // Clear cache when starting new session
+      clearDescriptionCache();
 
       final user = userBox.get('activeUser');
       if (user == null) {
@@ -167,7 +188,12 @@ class CycleCountCubit extends Cubit<CycleCountController> {
     }
   }
 
-  /// Scan a barcode and add to the session (with merge support)
+  /// Check if barcode has a cached (manually entered) description
+  String? getDescriptionFromCache(String barcode) {
+    return _manualDescriptionCache[barcode];
+  }
+
+  /// Scan a barcode and add to the session (with merge and cache support)
   Future<bool> scanBarcode(
       String barcode, {
         String? manualDescription,
@@ -206,7 +232,21 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       final results = await findItemByBarcode(barcode);
 
       if (results.isEmpty && manualDescription == null) {
-        // Item not found and no manual description provided
+        // Check if we have a cached description for this barcode
+        final cachedDescription = getDescriptionFromCache(barcode);
+
+        if (cachedDescription != null) {
+          // We have a cached description! Use it automatically
+          return await _addItemWithDescription(
+            barcode: barcode,
+            itemCode: '',
+            description: cachedDescription,
+            quantity: quantity,
+            isAutomatic: isAutomatic,
+          );
+        }
+
+        // Item not found and no cached description - ask user to enter it
         emit(state.copyWith(
           error: true,
           errorMessage: 'Barcode not found in portfolio. Please enter description.',
@@ -220,6 +260,36 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       final description =
       results.isNotEmpty ? results.first['description'] : manualDescription ?? '';
 
+      // Cache the description if it was manually entered
+      if (manualDescription != null) {
+        cacheDescription(barcode, manualDescription);
+      }
+
+      return await _addItemWithDescription(
+        barcode: barcode,
+        itemCode: itemCode,
+        description: description,
+        quantity: state.automaticQuantityMode ? quantity : state.scannedQty,
+        isAutomatic: isAutomatic,
+      );
+    } catch (e) {
+      emit(state.copyWith(
+        error: true,
+        errorMessage: 'Error scanning barcode: ${e.toString()}',
+      ));
+      return false;
+    }
+  }
+
+  /// Helper method to add item with description
+  Future<bool> _addItemWithDescription({
+    required String barcode,
+    required String itemCode,
+    required String description,
+    required int quantity,
+    required String isAutomatic,
+  }) async {
+    try {
       final timestamp = DateTime.now().toIso8601String();
 
       final detailMap = {
@@ -227,7 +297,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         'barcode': barcode,
         'itemCode': itemCode,
         'description': description,
-        'quantity': state.automaticQuantityMode ? quantity : state.scannedQty,
+        'quantity': quantity,
         'timestamp': timestamp,
         'isAutomatic': isAutomatic,
       };
@@ -242,7 +312,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
           barcode: barcode,
           itemCode: itemCode,
           description: description,
-          quantity: state.automaticQuantityMode ? quantity : state.scannedQty,
+          quantity: quantity,
           timestamp: timestamp,
           isAutomatic: isAutomatic,
         );
@@ -271,7 +341,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
     } catch (e) {
       emit(state.copyWith(
         error: true,
-        errorMessage: 'Error scanning barcode: ${e.toString()}',
+        errorMessage: 'Error adding item: ${e.toString()}',
       ));
       return false;
     }
@@ -306,7 +376,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
 
       final updatedItems = state.scannedItems.map((item) {
         if (item.detailId == detailId) {
-          // Create new item with updated note
           return CycleCountDetail(
             detailId: item.detailId,
             headerId: item.headerId,
@@ -373,6 +442,13 @@ class CycleCountCubit extends Cubit<CycleCountController> {
           .map((map) => CycleCountDetail.fromMap(map))
           .toList();
 
+      // Rebuild cache from loaded items (for descriptions entered this session)
+      for (var detail in details) {
+        if (detail.barcode.isNotEmpty && detail.description.isNotEmpty) {
+          cacheDescription(detail.barcode, detail.description);
+        }
+      }
+
       emit(state.copyWith(
         headerId: headerId,
         portfolioName: header['portfolio'] as String,
@@ -424,6 +500,9 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         'totalItems': summary['totalLines'],
       });
 
+      // Clear cache after session ends
+      clearDescriptionCache();
+
       emit(state.copyWith(error: false));
       return true;
     } catch (e) {
@@ -440,7 +519,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
     try {
       emit(state.copyWith(loading: true, error: false));
 
-      // Fetch all details for this header
       final detailsMaps = await cycleCountDb.getDetailsByHeader(headerId);
 
       if (detailsMaps.isEmpty) {
@@ -452,11 +530,9 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         return false;
       }
 
-      // Create new Excel workbook
       final excel = Excel.createExcel();
       final sheet = excel['Sheet1'];
 
-      // Define column headers in exact order
       const List<String> headers = [
         'Barcode',
         'ItemCode',
@@ -467,19 +543,16 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         'IsAutomatic'
       ];
 
-      // Add headers to first row
       for (int colIndex = 0; colIndex < headers.length; colIndex++) {
         sheet
             .cell(CellIndex.indexByColumnRow(columnIndex: colIndex, rowIndex: 0))
             .value = TextCellValue(headers[colIndex]);
       }
 
-      // Add data rows
       for (int rowIndex = 0; rowIndex < detailsMaps.length; rowIndex++) {
         final detail = detailsMaps[rowIndex];
         final dataRowIndex = rowIndex + 1;
 
-        // Column 0: Barcode
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 0,
@@ -487,7 +560,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         ))
             .value = TextCellValue(detail['barcode']?.toString() ?? '');
 
-        // Column 1: ItemCode
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 1,
@@ -495,7 +567,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         ))
             .value = TextCellValue(detail['itemCode']?.toString() ?? '');
 
-        // Column 2: Description
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 2,
@@ -503,7 +574,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         ))
             .value = TextCellValue(detail['description']?.toString() ?? '');
 
-        // Column 3: Quantity
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 3,
@@ -511,7 +581,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         ))
             .value = TextCellValue((detail['quantity'] ?? 0).toString());
 
-        // Column 4: Notes
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 4,
@@ -519,7 +588,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         ))
             .value = TextCellValue(detail['notes']?.toString() ?? '');
 
-        // Column 5: Timestamp
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 5,
@@ -527,7 +595,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         ))
             .value = TextCellValue(detail['timestamp']?.toString() ?? '');
 
-        // Column 6: IsAutomatic
         final isAutomaticValue = detail['isAutomatic']?.toString() ?? 'A';
         sheet
             .cell(CellIndex.indexByColumnRow(
@@ -537,7 +604,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
             .value = TextCellValue(isAutomaticValue);
       }
 
-      // Get downloads directory
       final directory = await getDownloadsDirectory();
       if (directory == null) {
         throw Exception('Cannot access external storage. Please check permissions.');
@@ -565,7 +631,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
           return false;
         }
 
-        // Success
         emit(state.copyWith(
           loading: false,
           error: false,
