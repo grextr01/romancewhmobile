@@ -36,7 +36,6 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
   void initState() {
     super.initState();
 
-    // Get cubit from context
     cubit = context.read<CycleCountCubit>();
 
     barcodeController = TextEditingController();
@@ -47,13 +46,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     quantityFocusNode = FocusNode();
     listScrollController = ScrollController();
 
-    // Listen to barcode input
     barcodeController.addListener(_onBarcodeChanged);
-
-    // Load portfolio items
     cubit.loadPortfolioItems();
 
-    // Request barcode focus
     Future.delayed(const Duration(milliseconds: 100), () {
       barcodeFocusNode.requestFocus();
       _hideKeyboard();
@@ -91,11 +86,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
   }
 
   void _onBarcodeChanged() {
-    // Check if Enter key was pressed (handled in onSubmitted)
-    // If keyboard is not visible and we have text, auto-process after a tiny delay
-    // This allows the scanner to complete its input
     if (!_keyboardVisible && barcodeController.text.isNotEmpty) {
-      // Wait a tiny bit for scanner to finish sending all characters
       Future.delayed(const Duration(milliseconds: 50), () {
         if (barcodeController.text.isNotEmpty && !_isKeyboardVisible()) {
           _handleBarcodeScanned(barcodeController.text.trim());
@@ -106,7 +97,6 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
   }
 
   void _scrollToNewestItem() {
-    // Scroll to bottom to show newest item
     Future.delayed(const Duration(milliseconds: 300), () {
       if (listScrollController.hasClients) {
         listScrollController.animateTo(
@@ -121,25 +111,17 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
   Future<void> _handleBarcodeScanned(String barcode) async {
     if (barcode.isEmpty) return;
 
-    //await Vibration.vibrate(duration: 100);
-
     final results = await cubit.findItemByBarcode(barcode);
-
-    // Filter to show only EXACT barcode matches
     final exactMatches = results.where((item) => item['barcode'] == barcode).toList();
 
     if (exactMatches.isEmpty) {
-      // No exact match found - show manual entry dialog
-      //await Vibration.vibrate(duration: 300);
       _showManualDescriptionDialog(barcode);
       return;
     }
 
     if (exactMatches.length == 1) {
-      // Single exact match - add directly
       final state = cubit.state;
       if (state.automaticQuantityMode) {
-        // Automatic ON - add directly with qty 1
         bool success = await cubit.scanBarcode(
           barcode,
           isAutomatic: 'A',
@@ -152,11 +134,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
           barcodeFocusNode.requestFocus();
         }
       } else {
-        // Automatic OFF - show quantity popup
         _showQuantityPopup(barcode, exactMatches[0]);
       }
     } else {
-      // Multiple exact matches (e.g., same barcode 2 times) - show selection dialog
       _showMultipleMatchDialog(barcode, exactMatches);
     }
   }
@@ -211,16 +191,11 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
 
               bool success = await cubit.scanBarcode(
                 barcode,
+                quantity: qty,
                 isAutomatic: 'Q',
               );
 
               if (success) {
-                // Update the quantity
-                if (cubit.state.scannedItems.isNotEmpty) {
-                  final lastItem = cubit.state.scannedItems.last;
-                  await cubit.updateItemQuantity(lastItem.detailId!, qty);
-                }
-
                 await Vibration.vibrate(duration: 100);
                 barcodeController.clear();
                 quantityController.clear();
@@ -264,7 +239,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
               ),
               const SizedBox(height: 12),
               Visibility(
-                visible: !context.read<CycleCountCubit>().isQuantityAutomatic(),
+                visible: !cubit.isQuantityAutomatic(),
                 child: TextField(
                   controller: quantityController,
                   keyboardType: TextInputType.number,
@@ -309,15 +284,11 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
               bool success = await cubit.scanBarcode(
                 barcode,
                 manualDescription: description,
-                isAutomatic: context.read<CycleCountCubit>().isQuantityAutomatic() ? 'D' : 'QD',
+                quantity: qty,
+                isAutomatic: cubit.isQuantityAutomatic() ? 'D' : 'QD',
               );
 
               if (success) {
-                if (cubit.state.scannedItems.isNotEmpty) {
-                  final lastItem = cubit.state.scannedItems.last;
-                  await cubit.updateItemQuantity(lastItem.detailId!, qty);
-                }
-
                 barcodeController.clear();
                 descriptionController.clear();
                 quantityController.clear();
@@ -366,16 +337,11 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                             Navigator.pop(dialogContext);
                             final state = cubit.state;
                             if (state.automaticQuantityMode) {
-                              // Automatic ON - add directly with qty 1
-                              cubit.scanBarcode(
-                                barcode,
-                                isAutomatic: 'A',
-                              );
+                              cubit.scanBarcode(barcode, isAutomatic: 'A');
                               barcodeController.clear();
                               _scrollToNewestItem();
                               barcodeFocusNode.requestFocus();
                             } else {
-                              // Automatic OFF - show quantity popup
                               _showQuantityPopup(barcode, matches[index]);
                             }
                           },
@@ -456,33 +422,133 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Mode Toggle
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Automatic Quantity:',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                // Mode Toggles - Side by Side
+                Row(
+                  children: [
+                    // Automatic Quantity Toggle
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: state.automaticQuantityMode
+                              ? secondaryColor.withValues(alpha: 0.1)
+                              : Colors.grey[100],
+                          border: Border.all(
+                            color: state.automaticQuantityMode
+                                ? secondaryColor
+                                : Colors.grey[300]!,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Checkbox(
+                                value: state.automaticQuantityMode,
+                                onChanged: (value) {
+                                  cubit.toggleAutomaticQuantity(value ?? true);
+                                },
+                                activeColor: secondaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Auto Qty',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    state.automaticQuantityMode ? 'On' : 'Off',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Switch(
-                        value: state.automaticQuantityMode,
-                        onChanged: (value) {
-                          cubit.toggleAutomaticQuantity(value);
-                        },
-                        activeTrackColor: secondaryColor,
+                    ),
+                    const SizedBox(width: 12),
+                    // Automatic Merge Toggle
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: state.automaticMergeMode
+                              ? secondaryColor.withValues(alpha: 0.1)
+                              : Colors.grey[100],
+                          border: Border.all(
+                            color: state.automaticMergeMode
+                                ? secondaryColor
+                                : Colors.grey[300]!,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Checkbox(
+                                value: state.automaticMergeMode,
+                                onChanged: (value) {
+                                  cubit.toggleAutomaticMerge(value ?? false);
+                                },
+                                activeColor: secondaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Auto Merge',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    state.automaticMergeMode ? 'On' : 'Off',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 
-                // Barcode Input with Enter key support
+                // Barcode Input
                 Row(
                   children: [
                     Expanded(
@@ -492,7 +558,6 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                         autofocus: true,
                         textInputAction: TextInputAction.go,
                         onSubmitted: (value) {
-                          // User pressed Enter on keyboard
                           if (value.trim().isNotEmpty) {
                             _handleBarcodeScanned(value.trim());
                             barcodeController.clear();
@@ -502,7 +567,6 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                         },
                         onTap: () {
                           _hideKeyboard();
-                          // Update keyboard visibility when field is tapped
                           Future.delayed(const Duration(milliseconds: 100), () {
                             _keyboardVisible = _isKeyboardVisible();
                           });
@@ -559,7 +623,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
 
                 const SizedBox(height: 16),
 
-                // Stats Container with better styling
+                // Stats Container
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
@@ -622,7 +686,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Scanned Items List - NEW ITEMS AT TOP
+                // Scanned Items List
                 Expanded(
                   child: state.scannedItems.isEmpty
                       ? Center(
@@ -655,7 +719,6 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                     ),
                   )
                       : ListView.builder(
-                    // Show newest items first (reverse order)
                     reverse: true,
                     controller: listScrollController,
                     itemCount: state.scannedItems.length,
@@ -679,7 +742,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Barcode row at top
+                              // Barcode row
                               Row(
                                 children: [
                                   const Icon(
@@ -826,7 +889,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                   ],
                                 ),
                               ),
-                              // Note section if exists
+                              // Note section
                               if (item.notes != null && item.notes!.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 10),

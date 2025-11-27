@@ -27,19 +27,27 @@ class CycleCountBlocPage extends StatelessWidget {
 
   Future<void> _showPortfolioDialog(BuildContext context) async {
     try {
-      final portfolioName = await showDialog<String>(
+      final result = await showDialog<Map<String, dynamic>>(
         context: context,
         barrierDismissible: false,
         builder: (_) => const PortfolioSelectionDialog(),
       );
 
-      if (portfolioName == null || !context.mounted) {
+      if (result == null || !context.mounted) {
         Navigator.of(context).pop();
         return;
       }
 
+      final portfolioName = result['portfolioName'] as String;
+      final automaticQuantity = result['automaticQuantity'] as bool;
+      final automaticMerge = result['automaticMerge'] as bool;
+
       // Get cubit from main.dart
       final cubit = context.read<CycleCountCubit>();
+
+      // Set the modes before initializing
+      cubit.setAutomaticQuantityMode(automaticQuantity);
+      cubit.setAutomaticMergeMode(automaticMerge);
 
       // Initialize session
       final headerId = await cubit.initializeSession(portfolioName);

@@ -13,6 +13,7 @@ class CycleCountController {
   final String scannedBarcode;
   final int scannedQty;
   final bool automaticQuantityMode;
+  final bool automaticMergeMode;
   final Map<String, dynamic>? selectedItem;
 
   CycleCountController({
@@ -27,6 +28,7 @@ class CycleCountController {
     this.scannedBarcode = '',
     this.scannedQty = 0,
     this.automaticQuantityMode = true,
+    this.automaticMergeMode = false,
     this.selectedItem,
   });
 
@@ -42,6 +44,7 @@ class CycleCountController {
     String? scannedBarcode,
     int? scannedQty,
     bool? automaticQuantityMode,
+    bool? automaticMergeMode,
     Map<String, dynamic>? selectedItem,
   }) {
     return CycleCountController(
@@ -56,6 +59,7 @@ class CycleCountController {
       scannedBarcode: scannedBarcode ?? this.scannedBarcode,
       scannedQty: scannedQty ?? this.scannedQty,
       automaticQuantityMode: automaticQuantityMode ?? this.automaticQuantityMode,
+      automaticMergeMode: automaticMergeMode ?? this.automaticMergeMode,
       selectedItem: selectedItem ?? this.selectedItem,
     );
   }
@@ -75,5 +79,25 @@ class CycleCountController {
           ifAbsent: () => 1);
     }
     return barcodes;
+  }
+
+  /// Check if an item with the same barcode already exists
+  CycleCountDetail? findExistingItem(String barcode) {
+    try {
+      return scannedItems.firstWhere((item) => item.barcode == barcode);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get total quantity of a specific barcode
+  int getTotalQuantityForBarcode(String barcode) {
+    int totalQty = 0;
+    for (var item in scannedItems) {
+      if (item.barcode == barcode) {
+        totalQty += item.quantity;
+      }
+    }
+    return totalQty;
   }
 }

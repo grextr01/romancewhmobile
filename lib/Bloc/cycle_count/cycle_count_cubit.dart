@@ -19,13 +19,37 @@ import '../../UX/Database.dart';
 class CycleCountCubit extends Cubit<CycleCountController> {
   final dbConn cycleCountDb = dbConn();
   final dbConn portfolioDb = dbConn();
-  // final PortfolioDatabase portfolioDb = PortfolioDatabase();
 
   CycleCountCubit(super.initialState);
 
   bool isQuantityAutomatic() {
     return state.automaticQuantityMode;
   }
+
+  bool isMergeAutomatic() {
+    return state.automaticMergeMode;
+  }
+
+  /// Set automatic quantity mode
+  void setAutomaticQuantityMode(bool value) {
+    emit(state.copyWith(automaticQuantityMode: value));
+  }
+
+  /// Set automatic merge mode
+  void setAutomaticMergeMode(bool value) {
+    emit(state.copyWith(automaticMergeMode: value));
+  }
+
+  /// Toggle automatic quantity mode
+  void toggleAutomaticQuantity(bool value) {
+    emit(state.copyWith(automaticQuantityMode: value));
+  }
+
+  /// Toggle automatic merge mode
+  void toggleAutomaticMerge(bool value) {
+    emit(state.copyWith(automaticMergeMode: value));
+  }
+
   /// Load all existing cycle count sessions from database
   Future<void> loadAllSessions() async {
     try {
@@ -107,10 +131,10 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       final portfolios = await portfolioDb.getAllPortfolios();
       final items = portfolios
           .map((p) => {
-                'barcode': p.barcode,
-                'itemCode': p.itemCode,
-                'description': p.description,
-              })
+        'barcode': p.barcode,
+        'itemCode': p.itemCode,
+        'description': p.description,
+      })
           .toList();
 
       emit(state.copyWith(
@@ -133,22 +157,23 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       final results = await portfolioDb.searchByBarcode(barcode);
       return results
           .map((p) => {
-                'barcode': p.barcode,
-                'itemCode': p.itemCode,
-                'description': p.description,
-              })
+        'barcode': p.barcode,
+        'itemCode': p.itemCode,
+        'description': p.description,
+      })
           .toList();
     } catch (e) {
       return [];
     }
   }
 
-  /// Scan a barcode and add to the session
+  /// Scan a barcode and add to the session (with merge support)
   Future<bool> scanBarcode(
-    String barcode, {
-    String? manualDescription,
-    String isAutomatic = 'A',
-  }) async {
+      String barcode, {
+        String? manualDescription,
+        String isAutomatic = 'A',
+        int quantity = 1,
+      }) async {
     try {
       if (state.headerId == null) {
         emit(state.copyWith(
@@ -156,6 +181,25 @@ class CycleCountCubit extends Cubit<CycleCountController> {
           errorMessage: 'No active session',
         ));
         return false;
+      }
+
+      // Check if automatic merge is enabled
+      if (state.automaticMergeMode) {
+        // Check if item already exists
+        final existingItem = state.findExistingItem(barcode);
+        if (existingItem != null) {
+          // Item exists - merge by updating quantity
+          final newQuantity = existingItem.quantity + quantity;
+          await updateItemQuantity(existingItem.detailId!, newQuantity);
+
+          // Update the state to show merged item
+          emit(state.copyWith(
+            scannedBarcode: barcode,
+            error: false,
+            errorMessage: '',
+          ));
+          return true;
+        }
       }
 
       // Search in portfolio
@@ -174,7 +218,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       // Prepare the detail
       final itemCode = results.isNotEmpty ? results.first['itemCode'] : '';
       final description =
-          results.isNotEmpty ? results.first['description'] : manualDescription ?? '';
+      results.isNotEmpty ? results.first['description'] : manualDescription ?? '';
 
       final timestamp = DateTime.now().toIso8601String();
 
@@ -183,7 +227,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         'barcode': barcode,
         'itemCode': itemCode,
         'description': description,
-        'quantity': state.automaticQuantityMode ? 1 : state.scannedQty,
+        'quantity': state.automaticQuantityMode ? quantity : state.scannedQty,
         'timestamp': timestamp,
         'isAutomatic': isAutomatic,
       };
@@ -198,7 +242,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
           barcode: barcode,
           itemCode: itemCode,
           description: description,
-          quantity: state.automaticQuantityMode ? 1 : state.scannedQty,
+          quantity: state.automaticQuantityMode ? quantity : state.scannedQty,
           timestamp: timestamp,
           isAutomatic: isAutomatic,
         );
@@ -262,7 +306,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
 
       final updatedItems = state.scannedItems.map((item) {
         if (item.detailId == detailId) {
-          // Create new item with updated note (CycleCountDetail doesn't have mutable notes)
+          // Create new item with updated note
           return CycleCountDetail(
             detailId: item.detailId,
             headerId: item.headerId,
@@ -306,11 +350,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
     }
   }
 
-  /// Toggle automatic quantity mode
-  void toggleAutomaticQuantity(bool value) {
-    emit(state.copyWith(automaticQuantityMode: value));
-  }
-
   /// Set scanned quantity for manual mode
   void setScannedQuantity(int quantity) {
     emit(state.copyWith(scannedQty: quantity));
@@ -319,8 +358,6 @@ class CycleCountCubit extends Cubit<CycleCountController> {
   /// Load existing session
   Future<bool> loadSession(int headerId) async {
     try {
-      //emit(state.copyWith(loading: true));
-
       final header = await cycleCountDb.getHeader(headerId);
       if (header == null) {
         emit(state.copyWith(
@@ -419,10 +456,10 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       final excel = Excel.createExcel();
       final sheet = excel['Sheet1'];
 
-      // Define column headers in exact order as specified
+      // Define column headers in exact order
       const List<String> headers = [
         'Barcode',
-        'ItemCode', 
+        'ItemCode',
         'Description',
         'Quantity',
         'Notes',
@@ -445,61 +482,62 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         // Column 0: Barcode
         sheet
             .cell(CellIndex.indexByColumnRow(
-              columnIndex: 0,
-              rowIndex: dataRowIndex,
-            ))
+          columnIndex: 0,
+          rowIndex: dataRowIndex,
+        ))
             .value = TextCellValue(detail['barcode']?.toString() ?? '');
 
         // Column 1: ItemCode
         sheet
             .cell(CellIndex.indexByColumnRow(
-              columnIndex: 1,
-              rowIndex: dataRowIndex,
-            ))
+          columnIndex: 1,
+          rowIndex: dataRowIndex,
+        ))
             .value = TextCellValue(detail['itemCode']?.toString() ?? '');
 
         // Column 2: Description
         sheet
             .cell(CellIndex.indexByColumnRow(
-              columnIndex: 2,
-              rowIndex: dataRowIndex,
-            ))
+          columnIndex: 2,
+          rowIndex: dataRowIndex,
+        ))
             .value = TextCellValue(detail['description']?.toString() ?? '');
 
         // Column 3: Quantity
         sheet
             .cell(CellIndex.indexByColumnRow(
-              columnIndex: 3,
-              rowIndex: dataRowIndex,
-            ))
+          columnIndex: 3,
+          rowIndex: dataRowIndex,
+        ))
             .value = TextCellValue((detail['quantity'] ?? 0).toString());
 
         // Column 4: Notes
         sheet
             .cell(CellIndex.indexByColumnRow(
-              columnIndex: 4,
-              rowIndex: dataRowIndex,
-            ))
+          columnIndex: 4,
+          rowIndex: dataRowIndex,
+        ))
             .value = TextCellValue(detail['notes']?.toString() ?? '');
 
         // Column 5: Timestamp
         sheet
             .cell(CellIndex.indexByColumnRow(
-              columnIndex: 5,
-              rowIndex: dataRowIndex,
-            ))
+          columnIndex: 5,
+          rowIndex: dataRowIndex,
+        ))
             .value = TextCellValue(detail['timestamp']?.toString() ?? '');
 
-        final isAutomaticValue = detail['isAutomatic']?.toString()?? 'A';
+        // Column 6: IsAutomatic
+        final isAutomaticValue = detail['isAutomatic']?.toString() ?? 'A';
         sheet
             .cell(CellIndex.indexByColumnRow(
-              columnIndex: 6,
-              rowIndex: dataRowIndex,
-            ))
+          columnIndex: 6,
+          rowIndex: dataRowIndex,
+        ))
             .value = TextCellValue(isAutomaticValue);
       }
 
-      // ✅ FIX: Use getExternalStorageDirectory instead of getApplicationDocumentsDirectory
+      // Get downloads directory
       final directory = await getDownloadsDirectory();
       if (directory == null) {
         throw Exception('Cannot access external storage. Please check permissions.');
@@ -508,41 +546,36 @@ class CycleCountCubit extends Cubit<CycleCountController> {
       final timestamp = DateFormat('yyyy-MM-dd_HH-mm-ss').format(DateTime.now());
       final safePortfolioName = portfolioName.replaceAll(RegExp(r'[^\w\s-]'), '');
       final fileName = '${safePortfolioName}_$timestamp.xlsx';
-      final filePath = '${directory.path}/$fileName';
-try{
 
-      final excelBytes = excel.encode();
-      final excelBytest = Uint8List.fromList(excelBytes!);
-      final path = await FilePicker.platform.saveFile(
-    dialogTitle: 'Save your file',
-    fileName: fileName,
-    bytes: excelBytest
-  );
-}
-catch(e){
-  throw Exception("error saving file: $e");
-}
-      // Encode and save the Excel file
-      // if (excelBytes != null) {
-      //   final file = File(path!);
-      //   //await file.writeAsBytes(excelBytes);
+      try {
+        final excelBytes = excel.encode();
+        final excelBytest = Uint8List.fromList(excelBytes!);
+        final path = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save your file',
+          fileName: fileName,
+          bytes: excelBytest,
+        );
 
-      //   // Verify file was created
-      //   if (!await file.exists()) {
-      //     throw Exception('File was not created successfully');
-      //   }
-      // } else {
-      //   throw Exception('Failed to encode Excel file');
-      // }
+        if (path == null) {
+          emit(state.copyWith(
+            loading: false,
+            error: true,
+            errorMessage: 'File save cancelled',
+          ));
+          return false;
+        }
 
-      // Success - emit state with confirmation message
-      emit(state.copyWith(
-        loading: false,
-        error: false,
-        errorMessage: 'File saved successfully to Downloads',
-      ));
+        // Success
+        emit(state.copyWith(
+          loading: false,
+          error: false,
+          errorMessage: 'File saved successfully',
+        ));
 
-      return true;
+        return true;
+      } catch (e) {
+        throw Exception("error saving file: $e");
+      }
     } catch (e) {
       emit(state.copyWith(
         loading: false,
