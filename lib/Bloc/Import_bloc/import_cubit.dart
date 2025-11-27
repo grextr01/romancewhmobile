@@ -7,7 +7,6 @@ import 'package:romancewhs/Controllers/import_controller.dart';
 import 'package:romancewhs/Models/portfolio.dart';
 import 'package:romancewhs/UX/Database.dart';
 import 'package:romancewhs/UX/DatabaseUX/portfolio_database.dart';
-
 // Top-level function for background processing
 List<Portfolio> _parseExcelInBackground(List<int> bytes) {
   var excel = Excel.decodeBytes(bytes);

@@ -30,14 +30,15 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
   late FocusNode quantityFocusNode;
   late CycleCountCubit cubit;
   late ScrollController listScrollController;
+  bool _keyboardVisible = false;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Get cubit from context
     cubit = context.read<CycleCountCubit>();
-    
+
     barcodeController = TextEditingController();
     quantityController = TextEditingController();
     descriptionController = TextEditingController();
@@ -45,6 +46,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     barcodeFocusNode = FocusNode();
     quantityFocusNode = FocusNode();
     listScrollController = ScrollController();
+
+    // Listen to barcode input
+    barcodeController.addListener(_onBarcodeChanged);
 
     // Load portfolio items
     cubit.loadPortfolioItems();
@@ -80,6 +84,25 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
 
   void _hideKeyboard() {
     SystemChannels.textInput.invokeMethod('TextInput.hide');
+  }
+
+  bool _isKeyboardVisible() {
+    return MediaQuery.of(context).viewInsets.bottom > 0;
+  }
+
+  void _onBarcodeChanged() {
+    // Check if Enter key was pressed (handled in onSubmitted)
+    // If keyboard is not visible and we have text, auto-process after a tiny delay
+    // This allows the scanner to complete its input
+    if (!_keyboardVisible && barcodeController.text.isNotEmpty) {
+      // Wait a tiny bit for scanner to finish sending all characters
+      Future.delayed(const Duration(milliseconds: 50), () {
+        if (barcodeController.text.isNotEmpty && !_isKeyboardVisible()) {
+          _handleBarcodeScanned(barcodeController.text.trim());
+          barcodeController.clear();
+        }
+      });
+    }
   }
 
   void _scrollToNewestItem() {
@@ -140,7 +163,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
 
   void _showQuantityPopup(String barcode, Map<String, dynamic> item) {
     final qtyController = TextEditingController(text: '1');
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -197,7 +220,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                   final lastItem = cubit.state.scannedItems.last;
                   await cubit.updateItemQuantity(lastItem.detailId!, qty);
                 }
-                
+
                 await Vibration.vibrate(duration: 100);
                 barcodeController.clear();
                 quantityController.clear();
@@ -221,11 +244,10 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Item Not Found'),
-        content: Container(
-          height: context.read<CycleCountCubit>().isQuantityAutomatic() ? 180: 240 ,
-          child: ListView(
-            //mainAxisSize: MainAxisSize.min,
-            //crossAxisAlignment: CrossAxisAlignment.start,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Barcode: $barcode'),
               const SizedBox(height: 16),
@@ -241,79 +263,73 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 autofocus: true,
               ),
               const SizedBox(height: 12),
-              
               Visibility(
                 visible: !context.read<CycleCountCubit>().isQuantityAutomatic(),
                 child: TextField(
-                controller: quantityController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: 'Quantity',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'Quantity',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
-              ),),
+              ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                barcodeController.clear();
-                barcodeFocusNode.requestFocus();
-              },
-              child: const Text('Skip'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: secondaryColor,
-              ),
-              onPressed: () async {
-                final description = descriptionController.text.trim();
-                final qty = int.tryParse(quantityController.text) ?? 1;
-                
-                if (description.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a description')),
-                  );
-                  return;
-                }
-          
-                Navigator.pop(dialogContext);
-          
-                bool success = await cubit.scanBarcode(
-                  barcode,
-                  manualDescription: description,
-                  isAutomatic: context.read<CycleCountCubit>().isQuantityAutomatic() ? 'D' : 'QD',
-                );
-          
-                if (success) {
-                  // Update the quantity
-                  if (cubit.state.scannedItems.isNotEmpty) {
-                    final lastItem = cubit.state.scannedItems.last;
-                    await cubit.updateItemQuantity(lastItem.detailId!, qty);
-                  }
-                  
-                  //await Vibration.vibrate(duration: 100);
-                  barcodeController.clear();
-                  descriptionController.clear();
-                  quantityController.clear();
-                  _scrollToNewestItem();
-                  barcodeFocusNode.requestFocus();
-                }
-              },
-              child: const Text(
-                'Add Item',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),],
-              )
             ],
           ),
         ),
         actions: [
-          
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              barcodeController.clear();
+              barcodeFocusNode.requestFocus();
+            },
+            child: const Text('Skip'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: secondaryColor,
+            ),
+            onPressed: () async {
+              final description = descriptionController.text.trim();
+              final qty = int.tryParse(quantityController.text) ?? 1;
+
+              if (description.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a description')),
+                );
+                return;
+              }
+
+              Navigator.pop(dialogContext);
+
+              bool success = await cubit.scanBarcode(
+                barcode,
+                manualDescription: description,
+                isAutomatic: context.read<CycleCountCubit>().isQuantityAutomatic() ? 'D' : 'QD',
+              );
+
+              if (success) {
+                if (cubit.state.scannedItems.isNotEmpty) {
+                  final lastItem = cubit.state.scannedItems.last;
+                  await cubit.updateItemQuantity(lastItem.detailId!, qty);
+                }
+
+                barcodeController.clear();
+                descriptionController.clear();
+                quantityController.clear();
+                _scrollToNewestItem();
+                barcodeFocusNode.requestFocus();
+              }
+            },
+            child: const Text(
+              'Add Item',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
         ],
       ),
     );
@@ -340,7 +356,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 child: Column(
                   children: List.generate(
                     matches.length,
-                    (index) => Container(
+                        (index) => Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: Material(
                         color: Colors.grey[100],
@@ -466,33 +482,45 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Barcode Input
-                TextField(
-                  focusNode: barcodeFocusNode,
-                  controller: barcodeController,
-                  autofocus: true,
-                  onChanged: (value) {
-                    if (value.isNotEmpty) {
-                      _handleBarcodeScanned(value.trim());
-                    }
-                  },
-                  // onSubmitted: (value) {
-                  //   _handleBarcodeScanned(value.trim());
-                  // },
-                  onTap: () {
-                    _hideKeyboard();
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Scan barcode...',
-                    prefixIcon: const Icon(Icons.barcode_reader),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                // Barcode Input with Enter key support
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        focusNode: barcodeFocusNode,
+                        controller: barcodeController,
+                        autofocus: true,
+                        textInputAction: TextInputAction.go,
+                        onSubmitted: (value) {
+                          // User pressed Enter on keyboard
+                          if (value.trim().isNotEmpty) {
+                            _handleBarcodeScanned(value.trim());
+                            barcodeController.clear();
+                            barcodeFocusNode.requestFocus();
+                            _hideKeyboard();
+                          }
+                        },
+                        onTap: () {
+                          _hideKeyboard();
+                          // Update keyboard visibility when field is tapped
+                          Future.delayed(const Duration(milliseconds: 100), () {
+                            _keyboardVisible = _isKeyboardVisible();
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Scan barcode or type and press Enter...',
+                          prefixIcon: const Icon(Icons.barcode_reader),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 8),
 
@@ -598,245 +626,245 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 Expanded(
                   child: state.scannedItems.isEmpty
                       ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.inbox_outlined,
-                                size: 64,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                'No items scanned yet',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Scan an item to get started',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 64,
+                          color: Colors.grey[300],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No items scanned yet',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
                           ),
-                        )
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Scan an item to get started',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                       : ListView.builder(
-                          // Show newest items first (reverse order)
-                          reverse: true,
-                          controller: listScrollController,
-                          itemCount: state.scannedItems.length,
-                          itemBuilder: (context, index) {
-                            final item = state.scannedItems[index];
-                            
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              elevation: index == 0 ? 4 : 1,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: index == 0
-                                    ? const BorderSide(
-                                        color: secondaryColor,
-                                        width: 2,
-                                      )
-                                    : BorderSide.none,
+                    // Show newest items first (reverse order)
+                    reverse: true,
+                    controller: listScrollController,
+                    itemCount: state.scannedItems.length,
+                    itemBuilder: (context, index) {
+                      final item = state.scannedItems[index];
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        elevation: index == 0 ? 4 : 1,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: index == 0
+                              ? const BorderSide(
+                            color: secondaryColor,
+                            width: 2,
+                          )
+                              : BorderSide.none,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Barcode row at top
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.grid_3x3,
+                                    size: 16,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Barcode: ${item.barcode ?? 'N/A'}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Barcode row at top
-                                    Row(
+                              const SizedBox(height: 10),
+                              // Item code and quantity row
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                       children: [
-                                        const Icon(
-                                          Icons.grid_3x3,
-                                          size: 16,
-                                          color: Colors.grey,
-                                        ),
-                                        const SizedBox(width: 8),
                                         Text(
-                                          'Barcode: ${item.barcode ?? 'N/A'}',
+                                          item.itemCode,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Qty: ${item.quantity}',
                                           style: const TextStyle(
                                             fontSize: 12,
-                                            color: Colors.grey,
-                                            fontWeight: FontWeight.w500,
+                                            fontWeight: FontWeight.w600,
+                                            color: secondaryColor,
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 10),
-                                    // Item code and quantity row
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                item.itemCode,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 14,
-                                                  color: textColor,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                'Qty: ${item.quantity}',
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: secondaryColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                  ),
+                                  PopupMenuButton(
+                                    onSelected: (value) {
+                                      if (value == 'edit') {
+                                        _showEditQuantityDialog(item);
+                                      } else if (value == 'delete') {
+                                        cubit.removeItem(item.detailId!);
+                                      } else if (value == 'note') {
+                                        _showAddNoteDialog(item);
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit, size: 16),
+                                            SizedBox(width: 8),
+                                            Text('Edit Qty'),
+                                          ],
                                         ),
-                                        PopupMenuButton(
-                                          onSelected: (value) {
-                                            if (value == 'edit') {
-                                              _showEditQuantityDialog(item);
-                                            } else if (value == 'delete') {
-                                              cubit.removeItem(item.detailId!);
-                                            } else if (value == 'note') {
-                                              _showAddNoteDialog(item);
-                                            }
-                                          },
-                                          itemBuilder: (context) => [
-                                            const PopupMenuItem(
-                                              value: 'edit',
-                                              child: Row(
-                                                children: [
-                                                  Icon(Icons.edit, size: 16),
-                                                  SizedBox(width: 8),
-                                                  Text('Edit Qty'),
-                                                ],
-                                              ),
-                                            ),
-                                            const PopupMenuItem(
-                                              value: 'delete',
-                                              child: Row(
-                                                children: [
-                                                  Icon(Icons.delete, size: 16, color: Colors.red),
-                                                  SizedBox(width: 8),
-                                                  Text(
-                                                    'Delete',
-                                                    style: TextStyle(color: Colors.red),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const PopupMenuItem(
-                                              value: 'note',
-                                              child: Row(
-                                                children: [
-                                                  Icon(Icons.note, size: 16),
-                                                  SizedBox(width: 8),
-                                                  Text('Add Note'),
-                                                ],
-                                              ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete, size: 16, color: Colors.red),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Delete',
+                                              style: TextStyle(color: Colors.red),
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    // Description row
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[50],
-                                        borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.description_outlined,
-                                            size: 14,
-                                            color: Colors.grey,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              item.description,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                          ),
-                                          if (item.isAutomatic != 'A')
-                                            Container(
-                                              margin: const EdgeInsets.only(left: 8),
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.orange[100],
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                              ),
-                                              child: const Text(
-                                                'Manual',
-                                                style: TextStyle(
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.orange,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
+                                      const PopupMenuItem(
+                                        value: 'note',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.note, size: 16),
+                                            SizedBox(width: 8),
+                                            Text('Add Note'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              // Description row
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.description_outlined,
+                                      size: 14,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        item.description,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
                                       ),
                                     ),
-                                    // Note section if exists
-                                    if (item.notes != null && item.notes!.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 10),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue[50],
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.sticky_note_2_outlined,
-                                                size: 14,
-                                                color: Colors.blue,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  item.notes!,
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                    color: Colors.blue,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                    if (item.isAutomatic != 'A')
+                                      Container(
+                                        margin: const EdgeInsets.only(left: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange[100],
+                                          borderRadius:
+                                          BorderRadius.circular(4),
+                                        ),
+                                        child: const Text(
+                                          'Manual',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.orange,
                                           ),
                                         ),
                                       ),
                                   ],
                                 ),
                               ),
-                            );
-                          },
+                              // Note section if exists
+                              if (item.notes != null && item.notes!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[50],
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.sticky_note_2_outlined,
+                                          size: 14,
+                                          color: Colors.blue,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            item.notes!,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.blue,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -854,18 +882,18 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                     onPressed: state.scannedItems.isEmpty
                         ? null
                         : () async {
-                            bool success = await cubit.submitSession();
-                            if (success && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Cycle count submitted successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                              Navigator.of(context).pop();
-                            }
-                          },
+                      bool success = await cubit.submitSession();
+                      if (success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Cycle count submitted successfully'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        Navigator.of(context).pop();
+                      }
+                    },
                     child: const Text(
                       'Save',
                       style: TextStyle(
