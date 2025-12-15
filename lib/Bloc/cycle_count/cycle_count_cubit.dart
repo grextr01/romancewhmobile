@@ -269,7 +269,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         barcode: barcode,
         itemCode: itemCode,
         description: description,
-        quantity: quantity, // ✅ FIX: Use the quantity parameter directly
+        quantity: quantity,
         isAutomatic: isAutomatic,
       );
     } catch (e) {
@@ -511,6 +511,28 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         errorMessage: 'Error submitting session: ${e.toString()}',
       ));
       return false;
+    }
+  }
+
+  /// Delete a cycle count session
+  Future<void> deleteSession(int headerId) async {
+    try {
+      await cycleCountDb.deleteHeader(headerId);
+
+      // Remove from existingSessions list
+      final updatedSessions = state.existingSessions
+          .where((session) => session.id != headerId)
+          .toList();
+
+      emit(state.copyWith(
+        existingSessions: updatedSessions,
+        error: false,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        error: true,
+        errorMessage: 'Error deleting session: ${e.toString()}',
+      ));
     }
   }
 
