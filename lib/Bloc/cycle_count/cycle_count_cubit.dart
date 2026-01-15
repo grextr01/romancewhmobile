@@ -209,17 +209,25 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         return false;
       }
 
-      // Check if automatic merge is enabled
       if (state.automaticMergeMode) {
-        // Check if item already exists
         final existingItem = state.findExistingItem(barcode);
         if (existingItem != null) {
-          // Item exists - merge by updating quantity
           final newQuantity = existingItem.quantity + quantity;
           await updateItemQuantity(existingItem.detailId!, newQuantity);
 
-          // Update the state to show merged item
+          // Reorder: Move merged item to top
+          final updatedItems = state.scannedItems
+              .where((item) => item.detailId != existingItem.detailId)
+              .toList();
+
+          // Update the existing item with new quantity
+          existingItem.quantity = newQuantity;
+
+          // Add it to the beginning of the list (TOP)
+          updatedItems.insert(0, existingItem);
+
           emit(state.copyWith(
+            scannedItems: updatedItems,
             scannedBarcode: barcode,
             error: false,
             errorMessage: '',
@@ -326,7 +334,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         }
 
         // Update state
-        final updatedItems = [...state.scannedItems, detail];
+        final updatedItems = [detail, ...state.scannedItems];
         emit(state.copyWith(
           scannedItems: updatedItems,
           scannedBarcode: barcode,
