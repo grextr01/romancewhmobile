@@ -150,7 +150,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
         }
         return;
       }
-
+      await Vibration.vibrate(duration: 400);
       // No cached description - show manual entry dialog
       _showManualDescriptionDialog(barcode);
       return;
