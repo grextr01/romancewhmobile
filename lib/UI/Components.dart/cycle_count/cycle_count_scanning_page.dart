@@ -835,67 +835,67 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 const SizedBox(height: 16),
 
                 // Stats Container
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: secondaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: secondaryColor.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Column(
-                        children: [
-                          const Text(
-                            'Items Scanned',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${state.scannedItems.length}',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: secondaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        height: 40,
-                        width: 1,
-                        color: secondaryColor.withValues(alpha: 0.3),
-                      ),
-                      Column(
-                        children: [
-                          const Text(
-                            'Total Qty',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${state.scannedItems.fold<int>(0, (sum, item) => sum + item.quantity)}',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
-                              color: secondaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
+                // Container(
+                //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                //   decoration: BoxDecoration(
+                //     color: secondaryColor.withValues(alpha: 0.1),
+                //     borderRadius: BorderRadius.circular(8),
+                //     border: Border.all(color: secondaryColor.withValues(alpha: 0.3)),
+                //   ),
+                //   child: Row(
+                //     mainAxisAlignment: MainAxisAlignment.spaceAround,
+                //     children: [
+                //       Column(
+                //         children: [
+                //           const Text(
+                //             'Items Scanned',
+                //             style: TextStyle(
+                //               fontSize: 11,
+                //               color: Colors.grey,
+                //               fontWeight: FontWeight.w500,
+                //             ),
+                //           ),
+                //           const SizedBox(height: 4),
+                //           Text(
+                //             '${state.scannedItems.length}',
+                //             style: const TextStyle(
+                //               fontSize: 24,
+                //               fontWeight: FontWeight.w700,
+                //               color: secondaryColor,
+                //             ),
+                //           ),
+                //         ],
+                //       ),
+                //       Container(
+                //         height: 40,
+                //         width: 1,
+                //         color: secondaryColor.withValues(alpha: 0.3),
+                //       ),
+                //       Column(
+                //         children: [
+                //           const Text(
+                //             'Total Qty',
+                //             style: TextStyle(
+                //               fontSize: 11,
+                //               color: Colors.grey,
+                //               fontWeight: FontWeight.w500,
+                //             ),
+                //           ),
+                //           const SizedBox(height: 4),
+                //           Text(
+                //             '${state.scannedItems.fold<int>(0, (sum, item) => sum + item.quantity)}',
+                //             style: const TextStyle(
+                //               fontSize: 24,
+                //               fontWeight: FontWeight.w700,
+                //               color: secondaryColor,
+                //             ),
+                //           ),
+                //         ],
+                //       ),
+                //     ],
+                //   ),
+                // ),
+                // const SizedBox(height: 16),
 
                 // Scanned Items List
                 Expanded(
