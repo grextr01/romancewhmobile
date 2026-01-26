@@ -124,23 +124,32 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     final exactMatches = results.where((item) => item['barcode'] == barcode).toList();
 
     if (exactMatches.isEmpty) {
-      // Check if manual descriptions are allowed
+      // Item not found in portfolio
       if (!cubit.state.allowManualDescriptions) {
-        // NOT ALLOWED - show error
-        await Vibration.vibrate(duration: 400);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Item not found and manual descriptions are disabled'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.red,
-          ),
+        // MANUAL DESCRIPTIONS ARE DISABLED - Auto-add with empty description
+        bool success = await cubit.scanBarcode(
+          barcode,
+          isAutomatic: 'A',
         );
-        barcodeController.clear();
-        barcodeFocusNode.requestFocus();
+
+        if (success) {
+          await Vibration.vibrate(duration: 100);
+          barcodeController.clear();
+          barcodeFocusNode.requestFocus();
+        } else {
+          await Vibration.vibrate(duration: 400);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${cubit.state.errorMessage}'),
+              duration: const Duration(seconds: 2),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
         return;
       }
 
-      // Manual descriptions ARE allowed
+      // MANUAL DESCRIPTIONS ARE ENABLED
       // Check if we have a cached description for this barcode
       final cachedDescription = cubit.getDescriptionFromCache(barcode);
 
