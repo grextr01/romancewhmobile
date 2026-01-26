@@ -41,6 +41,7 @@ class CycleCountBlocPage extends StatelessWidget {
       final portfolioName = result['portfolioName'] as String;
       final automaticQuantity = result['automaticQuantity'] as bool;
       final automaticMerge = result['automaticMerge'] as bool;
+      final allowManualDescriptions = result['allowManualDescriptions'] as bool;
 
       // Get cubit from main.dart
       final cubit = context.read<CycleCountCubit>();
@@ -48,6 +49,7 @@ class CycleCountBlocPage extends StatelessWidget {
       // Set the modes before initializing
       cubit.setAutomaticQuantityMode(automaticQuantity);
       cubit.setAutomaticMergeMode(automaticMerge);
+      cubit.setAllowManualDescriptions(allowManualDescriptions);
 
       // Initialize session
       final headerId = await cubit.initializeSession(portfolioName);

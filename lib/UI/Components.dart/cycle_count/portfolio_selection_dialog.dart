@@ -14,6 +14,7 @@ class _PortfolioSelectionDialogState extends State<PortfolioSelectionDialog> {
   final FocusNode portfolioFocusNode = FocusNode();
   bool automaticQuantity = true;
   bool automaticMerge = false;
+  bool allowManualDescriptions = true; // NEW TOGGLE
 
   @override
   void initState() {
@@ -74,6 +75,7 @@ class _PortfolioSelectionDialogState extends State<PortfolioSelectionDialog> {
                     'portfolioName': value.trim(),
                     'automaticQuantity': automaticQuantity,
                     'automaticMerge': automaticMerge,
+                    'allowManualDescriptions': allowManualDescriptions,
                   });
                 }
               },
@@ -89,7 +91,7 @@ class _PortfolioSelectionDialogState extends State<PortfolioSelectionDialog> {
               ),
             ),
             const SizedBox(height: 10),
-            // Mode toggles in a row
+            // Mode toggles - 2 columns
             Row(
               children: [
                 // Automatic Quantity Toggle
@@ -218,6 +220,66 @@ class _PortfolioSelectionDialogState extends State<PortfolioSelectionDialog> {
               ],
             ),
             const SizedBox(height: 12),
+            // Allow Manual Descriptions Toggle - NEW
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: allowManualDescriptions
+                    ? secondaryColor.withValues(alpha: 0.1)
+                    : Colors.grey[100],
+                border: Border.all(
+                  color: allowManualDescriptions
+                      ? secondaryColor
+                      : Colors.grey[300]!,
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: Checkbox(
+                      value: allowManualDescriptions,
+                      onChanged: (value) {
+                        setState(() {
+                          allowManualDescriptions = value ?? true;
+                        });
+                      },
+                      activeColor: secondaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Allow Descriptions',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          allowManualDescriptions ? 'On' : 'Off',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             // Info text
             Container(
               padding: const EdgeInsets.all(8),
@@ -243,6 +305,44 @@ class _PortfolioSelectionDialogState extends State<PortfolioSelectionDialog> {
                       fontSize: 10,
                       color: Colors.blue,
                       fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.amber[300]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Allow Descriptions:',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.amber,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'ON: Users can enter descriptions for items not in portfolio',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.amber,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'OFF: Items without description show "-" in export',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.amber,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -275,6 +375,7 @@ class _PortfolioSelectionDialogState extends State<PortfolioSelectionDialog> {
               'portfolioName': portfolio,
               'automaticQuantity': automaticQuantity,
               'automaticMerge': automaticMerge,
+              'allowManualDescriptions': allowManualDescriptions,
             });
           },
           child: const Text(

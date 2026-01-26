@@ -53,6 +53,16 @@ class CycleCountCubit extends Cubit<CycleCountController> {
     emit(state.copyWith(automaticMergeMode: value));
   }
 
+  /// Set allow manual descriptions mode
+  void setAllowManualDescriptions(bool value) {
+    emit(state.copyWith(allowManualDescriptions: value));
+  }
+
+  /// Toggle allow manual descriptions mode
+  void toggleAllowManualDescriptions(bool value) {
+    emit(state.copyWith(allowManualDescriptions: value));
+  }
+
   /// Get previously entered description for a barcode (from cache)
   String? getCachedDescription(String barcode) {
     return _manualDescriptionCache[barcode];
@@ -254,7 +264,18 @@ class CycleCountCubit extends Cubit<CycleCountController> {
           );
         }
 
-        // Item not found and no cached description - ask user to enter it
+        // If manual descriptions are disabled, add item without description
+        if (!state.allowManualDescriptions) {
+          return await _addItemWithDescription(
+            barcode: barcode,
+            itemCode: '',
+            description: '', // Empty description
+            quantity: quantity,
+            isAutomatic: isAutomatic,
+          );
+        }
+
+        // If manual descriptions are enabled, ask user to enter it
         emit(state.copyWith(
           error: true,
           errorMessage: 'Barcode not found in portfolio. Please enter description.',
@@ -597,12 +618,18 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         ))
             .value = TextCellValue(detail['itemCode']?.toString() ?? '');
 
+        // Description with allowManualDescriptions check
+        final description = detail['description']?.toString() ?? '';
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 2,
           rowIndex: dataRowIndex,
         ))
-            .value = TextCellValue(detail['description']?.toString() ?? '');
+            .value = TextCellValue(
+          description.isEmpty && !state.allowManualDescriptions
+              ? '-'
+              : description,
+        );
 
         sheet
             .cell(CellIndex.indexByColumnRow(

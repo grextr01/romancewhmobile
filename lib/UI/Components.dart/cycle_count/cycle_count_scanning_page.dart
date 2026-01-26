@@ -117,8 +117,6 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     }
   }
 
-
-
   Future<void> _handleBarcodeScanned(String barcode) async {
     if (barcode.isEmpty) return;
 
@@ -126,6 +124,23 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     final exactMatches = results.where((item) => item['barcode'] == barcode).toList();
 
     if (exactMatches.isEmpty) {
+      // Check if manual descriptions are allowed
+      if (!cubit.state.allowManualDescriptions) {
+        // NOT ALLOWED - show error
+        await Vibration.vibrate(duration: 400);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Item not found and manual descriptions are disabled'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+        barcodeController.clear();
+        barcodeFocusNode.requestFocus();
+        return;
+      }
+
+      // Manual descriptions ARE allowed
       // Check if we have a cached description for this barcode
       final cachedDescription = cubit.getDescriptionFromCache(barcode);
 
@@ -726,6 +741,68 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    // Allow Manual Descriptions Toggle - READ ONLY DISPLAY
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: state.allowManualDescriptions
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.red[100],
+                          border: Border.all(
+                            color: state.allowManualDescriptions
+                                ? Colors.green
+                                : Colors.red[300]!,
+                            width: 1.5,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              state.allowManualDescriptions
+                                  ? Icons.check_circle
+                                  : Icons.block,
+                              size: 18,
+                              color: state.allowManualDescriptions
+                                  ? Colors.green
+                                  : Colors.red[300],
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Manual Desc',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    state.allowManualDescriptions
+                                        ? 'Allowed'
+                                        : 'Disabled',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: state.allowManualDescriptions
+                                          ? Colors.green
+                                          : Colors.red[300],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -833,69 +910,6 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                   ),
 
                 const SizedBox(height: 16),
-
-                // Stats Container
-                // Container(
-                //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                //   decoration: BoxDecoration(
-                //     color: secondaryColor.withValues(alpha: 0.1),
-                //     borderRadius: BorderRadius.circular(8),
-                //     border: Border.all(color: secondaryColor.withValues(alpha: 0.3)),
-                //   ),
-                //   child: Row(
-                //     mainAxisAlignment: MainAxisAlignment.spaceAround,
-                //     children: [
-                //       Column(
-                //         children: [
-                //           const Text(
-                //             'Items Scanned',
-                //             style: TextStyle(
-                //               fontSize: 11,
-                //               color: Colors.grey,
-                //               fontWeight: FontWeight.w500,
-                //             ),
-                //           ),
-                //           const SizedBox(height: 4),
-                //           Text(
-                //             '${state.scannedItems.length}',
-                //             style: const TextStyle(
-                //               fontSize: 24,
-                //               fontWeight: FontWeight.w700,
-                //               color: secondaryColor,
-                //             ),
-                //           ),
-                //         ],
-                //       ),
-                //       Container(
-                //         height: 40,
-                //         width: 1,
-                //         color: secondaryColor.withValues(alpha: 0.3),
-                //       ),
-                //       Column(
-                //         children: [
-                //           const Text(
-                //             'Total Qty',
-                //             style: TextStyle(
-                //               fontSize: 11,
-                //               color: Colors.grey,
-                //               fontWeight: FontWeight.w500,
-                //             ),
-                //           ),
-                //           const SizedBox(height: 4),
-                //           Text(
-                //             '${state.scannedItems.fold<int>(0, (sum, item) => sum + item.quantity)}',
-                //             style: const TextStyle(
-                //               fontSize: 24,
-                //               fontWeight: FontWeight.w700,
-                //               color: secondaryColor,
-                //             ),
-                //           ),
-                //         ],
-                //       ),
-                //     ],
-                //   ),
-                // ),
-                // const SizedBox(height: 16),
 
                 // Scanned Items List
                 Expanded(
@@ -1066,11 +1080,13 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                             value: 'delete',
                                             child: Row(
                                               children: [
-                                                Icon(Icons.delete, size: 16, color: Colors.red),
+                                                Icon(Icons.delete, size: 16,
+                                                    color: Colors.red),
                                                 SizedBox(width: 8),
                                                 Text(
                                                   'Delete',
-                                                  style: TextStyle(color: Colors.red),
+                                                  style: TextStyle(
+                                                      color: Colors.red),
                                                 ),
                                               ],
                                             ),
@@ -1118,7 +1134,8 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                         ),
                                         if (item.isAutomatic != 'A')
                                           Container(
-                                            margin: const EdgeInsets.only(left: 8),
+                                            margin:
+                                            const EdgeInsets.only(left: 8),
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 6,
                                               vertical: 2,
@@ -1144,14 +1161,16 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                     ),
                                   ),
                                   // Note section
-                                  if (item.notes != null && item.notes!.isNotEmpty)
+                                  if (item.notes != null &&
+                                      item.notes!.isNotEmpty)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 10),
                                       child: Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
                                           color: Colors.blue[50],
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius:
+                                          BorderRadius.circular(6),
                                         ),
                                         child: Row(
                                           children: [

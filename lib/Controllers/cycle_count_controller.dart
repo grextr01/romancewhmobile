@@ -14,6 +14,7 @@ class CycleCountController {
   final int scannedQty;
   final bool automaticQuantityMode;
   final bool automaticMergeMode;
+  final bool allowManualDescriptions;
   final Map<String, dynamic>? selectedItem;
 
   CycleCountController({
@@ -29,6 +30,7 @@ class CycleCountController {
     this.scannedQty = 0,
     this.automaticQuantityMode = true,
     this.automaticMergeMode = false,
+    this.allowManualDescriptions = true,
     this.selectedItem,
   });
 
@@ -45,6 +47,7 @@ class CycleCountController {
     int? scannedQty,
     bool? automaticQuantityMode,
     bool? automaticMergeMode,
+    bool? allowManualDescriptions,
     Map<String, dynamic>? selectedItem,
   }) {
     return CycleCountController(
@@ -60,6 +63,7 @@ class CycleCountController {
       scannedQty: scannedQty ?? this.scannedQty,
       automaticQuantityMode: automaticQuantityMode ?? this.automaticQuantityMode,
       automaticMergeMode: automaticMergeMode ?? this.automaticMergeMode,
+      allowManualDescriptions: allowManualDescriptions ?? this.allowManualDescriptions,
       selectedItem: selectedItem ?? this.selectedItem,
     );
   }
