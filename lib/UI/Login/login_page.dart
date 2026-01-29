@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:romancewhs/Bloc/Login_bloc/login_cubit.dart';
 import 'package:romancewhs/Controllers/login_controller.dart';
 import 'package:romancewhs/Models/Boxes/boxes.dart';
@@ -14,7 +15,6 @@ class LoginPage extends StatelessWidget {
   final FocusNode _emailFocusNode = FocusNode();
   final TextEditingController _passwordController = TextEditingController();
   final FocusNode _passwordFocusNode = FocusNode();
-
   @override
   Widget build(BuildContext context) {
     setUserName();
@@ -150,6 +150,19 @@ class LoginPage extends StatelessWidget {
                                       }),
                                   const Padding(
                                       padding: EdgeInsets.only(top: 12)),
+                                  FutureBuilder<PackageInfo>(
+                                    future: PackageInfo.fromPlatform(),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.hasData) {
+                                        return Text(
+                                          'Version ${snapshot.data!.version}',
+                                          style: const TextStyle(
+                                              color: Colors.grey, fontSize: 12),
+                                        );
+                                      }
+                                      return const Text('Version loading...');
+                                    },
+                                  ),
                                 ],
                               ),
                             ),
