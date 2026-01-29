@@ -88,6 +88,11 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     SystemChannels.textInput.invokeMethod('TextInput.hide');
   }
 
+  /// Clean barcode - remove all special characters, keep only letters and numbers
+  String _cleanBarcode(String barcode) {
+    return barcode.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+  }
+
   // Helper method to filter items based on search
   List<CycleCountDetail> _getFilteredItems(List<CycleCountDetail> items) {
     if (searchController.text.isEmpty) {
@@ -118,6 +123,11 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
   }
 
   Future<void> _handleBarcodeScanned(String barcode) async {
+    if (barcode.isEmpty) return;
+
+    // CLEAN BARCODE - REMOVE ALL SPECIAL CHARACTERS
+    barcode = _cleanBarcode(barcode);
+
     if (barcode.isEmpty) return;
 
     final results = await cubit.findItemByBarcode(barcode);
