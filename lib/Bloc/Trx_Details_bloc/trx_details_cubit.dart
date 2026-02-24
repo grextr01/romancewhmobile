@@ -57,11 +57,11 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
     }
   }
 
-  bool scanItemBarcode(String barcode, BuildContext context,
-      FocusNode focusNode, int scannedQty) {
+  Future<bool> scanItemBarcode(String barcode, BuildContext context,
+      FocusNode focusNode, int scannedQty) async {
     //barcode = "4013496529616";
     TransactionDetail item = state.transactionDetails!.firstWhere(
-      (element) => element.barcode == barcode || element.itemCode == barcode,
+      (element) => element.barcode == barcode || element.itemCode == barcode || element.Barcodes.contains(barcode),
       orElse: () => TransactionDetail(
         lineId: 0,
         orgId: 0,
@@ -71,6 +71,7 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
         quantity: 0,
         freeQty: 0,
         barcode: '',
+        Barcodes: []
       ),
     );
     // if (state.transactionDetails != null) {
@@ -113,6 +114,11 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
         neededQty: item.quantity + item.freeQty,
         scannedQty: item.scannedQty,
         leftQty: item.quantity + item.freeQty - item.scannedQty));
+    var response = await api.getApiToMap(
+        api.apiBaseUrl, '/Warehouse/romance/scanned/${state.headerId}', 'put',{
+          'lineId':item.lineId,
+          'scanned':item.scannedQty
+        });
     return true;
   }
 
@@ -124,9 +130,9 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
       scannedItemCode: '',
       scannedItemName: '',
     ));
-    if (state.transactionDetails != null) {
-      for (var element in state.transactionDetails!) {
-        if (element.barcode == barcode || element.itemCode == barcode) {
+    if (state.unfilteredDetails != null) {
+      for (var element in state.unfilteredDetails!) {
+        if (element.barcode == barcode || element.itemCode == barcode || element.Barcodes.contains(barcode)) {
           item = element;
           break;
         }
@@ -153,12 +159,15 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
       scannedBarcode: barcode,
       scannedItemCode: item.itemCode,
       scannedItemName: item.description,
+      neededQty: item.quantity + item.freeQty,
+        scannedQty: item.scannedQty,
+        leftQty: item.quantity + item.freeQty - item.scannedQty
     ));
     if ((item.quantity + item.freeQty) == item.scannedQty) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('The item is already scanned.'),
+          title: const Text('The scanned quantity exceeds the available quantity.'),
           actions: [
             TextButton(
               onPressed: () {

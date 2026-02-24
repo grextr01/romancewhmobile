@@ -8,6 +8,7 @@ class TransactionDetail {
   int freeQty;
   String barcode;
   int scannedQty; 
+  List<String> Barcodes;
 
   TransactionDetail({
     required this.lineId,
@@ -19,6 +20,7 @@ class TransactionDetail {
     required this.freeQty,
     required this.barcode,
     this.scannedQty = 0, 
+    required this.Barcodes
   });
 
   factory TransactionDetail.fromJson(Map map) {
@@ -31,7 +33,8 @@ class TransactionDetail {
         orgCode: map['ORGANIZATION_CODE'],
         orgId: map['ORGANIZATION_ID'],
         quantity: map['QUANTITY'],
-        scannedQty: 0, 
+        scannedQty: map["SCANNED_QUANTITY"] ?? 0, 
+        Barcodes: List<String>.from(map["Barcodes"]) ?? []
     );
   }
 }

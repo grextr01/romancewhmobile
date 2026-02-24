@@ -12,7 +12,7 @@ class TrxDetailsController {
   String scannedItemCode = '';
   String scannedItemName = '';
   int? scannedQty;
-  bool showAll = false;
+  bool showAll = true;
   bool setScannedQty = true;
   int? neededQty;
   int? leftQty;
@@ -33,7 +33,7 @@ class TrxDetailsController {
       this.scannedItemCode = '',
       this.scannedItemName = '',
       this.scannedQty,
-      this.showAll = false,
+      this.showAll = true,
       this.setScannedQty = true,
       this.neededQty,
       this.leftQty,

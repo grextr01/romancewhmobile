@@ -161,8 +161,8 @@ class DetailsPage extends StatelessWidget {
                           onTap: () {
                             barcodeFocusNode.requestFocus();
                           },
-                          onSubmitted: (value) {
-                            bool scanned = context
+                          onSubmitted: (value) async {
+                            bool scanned = await context
                                 .read<TrxDetailsCubit>()
                                 .scanItemBarcode(state.scannedBarcode, context,
                                     barcodeFocusNode, int.parse(value));
@@ -217,7 +217,7 @@ class DetailsPage extends StatelessWidget {
                         scannedQtyFocusNode.requestFocus();
                         return;
                       }
-                      bool scanned = context
+                      bool scanned = await context
                           .read<TrxDetailsCubit>()
                           .scanItemBarcode(value, context, barcodeFocusNode, 1);
                       barcodeController.clear();
