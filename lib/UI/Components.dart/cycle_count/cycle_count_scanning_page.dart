@@ -39,6 +39,29 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     await _audioPlayer.play(AssetSource('sounds/error.mp3'));
   }
 
+  Future<void> _playAlreadyCountedSound() async {
+    await _audioPlayer.stop(); // avoid overlap on rapid scans
+    await _audioPlayer.play(AssetSource('sounds/error-call-to-attention.mp3'));
+  }
+
+  Future<void> _playNewItemSound() async {
+    await _audioPlayer.stop();
+    await _audioPlayer.play(AssetSource('sounds/community-error.mp3'));
+  }
+
+  /// Plays the correct feedback sound based on whether this barcode is
+  /// already in the scanned list (already counted) or is a brand-new item.
+  /// IMPORTANT: call this BEFORE scanBarcode() adds/merges the item,
+  /// otherwise a new item will already be in the list when we check.
+  Future<void> _playScanFeedbackSound(String barcode) async {
+    final alreadyCounted = cubit.state.findExistingItem(barcode) != null;
+    if (alreadyCounted) {
+      await _playAlreadyCountedSound();
+    } else {
+      await _playNewItemSound();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -138,12 +161,16 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
 
     final results = await cubit.findItemByBarcode(barcode);
     final exactMatches =
-        results.where((item) => item['barcode'] == barcode).toList();
+    results.where((item) => item['barcode'] == barcode).toList();
 
     if (exactMatches.isEmpty) {
       // Item not found in portfolio
       if (!cubit.state.allowManualDescriptions) {
         // MANUAL DESCRIPTIONS ARE DISABLED - Auto-add with empty description
+
+        // Decide the sound BEFORE adding the item
+        await _playScanFeedbackSound(barcode);
+
         bool success = await cubit.scanBarcode(
           barcode,
           isAutomatic: 'A',
@@ -175,6 +202,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
         // We have a cached description! Use it automatically
         final state = cubit.state;
         if (state.automaticQuantityMode) {
+          // Decide the sound BEFORE adding the item
+          await _playScanFeedbackSound(barcode);
+
           bool success = await cubit.scanBarcode(
             barcode,
             manualDescription: cachedDescription,
@@ -201,6 +231,10 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
 
     if (exactMatches.length == 1) {
       final state = cubit.state;
+
+      // Decide the sound BEFORE adding the item
+      await _playScanFeedbackSound(barcode);
+
       if (state.automaticQuantityMode) {
         bool success = await cubit.scanBarcode(
           barcode,
@@ -294,6 +328,10 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
             ),
             onPressed: () async {
               final qty = int.tryParse(qtyController.text) ?? 1;
+
+              // Decide the sound BEFORE adding the item
+              await _playScanFeedbackSound(barcode);
+
               Navigator.pop(dialogContext);
 
               bool success = await cubit.scanBarcode(
@@ -367,6 +405,10 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
             ),
             onPressed: () async {
               final qty = int.tryParse(qtyController.text) ?? 1;
+
+              // Decide the sound BEFORE adding the item
+              await _playScanFeedbackSound(barcode);
+
               Navigator.pop(dialogContext);
 
               bool success = await cubit.scanBarcode(
@@ -503,6 +545,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 return;
               }
 
+              // Decide the sound BEFORE adding the item
+              await _playScanFeedbackSound(barcode);
+
               Navigator.pop(dialogContext);
 
               // Cache the description for future scans
@@ -553,16 +598,19 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 child: Column(
                   children: List.generate(
                     matches.length,
-                    (index) => Container(
+                        (index) => Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: Material(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(8),
                         child: InkWell(
-                          onTap: () {
+                          onTap: () async {
                             Navigator.pop(dialogContext);
                             final state = cubit.state;
                             if (state.automaticQuantityMode) {
+                              // Decide the sound BEFORE adding the item
+                              await _playScanFeedbackSound(barcode);
+
                               cubit.scanBarcode(barcode, isAutomatic: 'A');
                               barcodeController.clear();
                               barcodeFocusNode.requestFocus();
@@ -843,12 +891,12 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              searchController.clear();
-                              setState(() {});
-                            },
-                          )
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        searchController.clear();
+                        setState(() {});
+                      },
+                    )
                         : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -944,7 +992,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                   child: Builder(
                     builder: (context) {
                       final filteredItems =
-                          _getFilteredItems(state.scannedItems);
+                      _getFilteredItems(state.scannedItems);
 
                       if (state.scannedItems.isEmpty) {
                         return Center(
@@ -1025,9 +1073,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                               borderRadius: BorderRadius.circular(8),
                               side: index == 0
                                   ? const BorderSide(
-                                      color: secondaryColor,
-                                      width: 2,
-                                    )
+                                color: secondaryColor,
+                                width: 2,
+                              )
                                   : BorderSide.none,
                             ),
                             child: Container(
@@ -1061,7 +1109,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               item.itemCode.isEmpty
@@ -1166,7 +1214,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                         if (item.isAutomatic != 'A')
                                           Container(
                                             margin:
-                                                const EdgeInsets.only(left: 8),
+                                            const EdgeInsets.only(left: 8),
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 6,
                                               vertical: 2,
@@ -1174,11 +1222,11 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                             decoration: BoxDecoration(
                                               color: Colors.orange[100],
                                               borderRadius:
-                                                  BorderRadius.circular(4),
+                                              BorderRadius.circular(4),
                                             ),
                                             child: Text(
                                               item.isAutomatic == 'D' ||
-                                                      item.isAutomatic == 'QD'
+                                                  item.isAutomatic == 'QD'
                                                   ? 'Manual'
                                                   : 'Manual',
                                               style: const TextStyle(
@@ -1201,7 +1249,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                         decoration: BoxDecoration(
                                           color: Colors.blue[50],
                                           borderRadius:
-                                              BorderRadius.circular(6),
+                                          BorderRadius.circular(6),
                                         ),
                                         child: Row(
                                           children: [
@@ -1251,18 +1299,18 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                     onPressed: state.scannedItems.isEmpty
                         ? null
                         : () async {
-                            bool success = await cubit.submitSession();
-                            if (success && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'Cycle count submitted successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                              Navigator.of(context).pop();
-                            }
-                          },
+                      bool success = await cubit.submitSession();
+                      if (success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Cycle count submitted successfully'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        Navigator.of(context).pop();
+                      }
+                    },
                     child: const Text(
                       'Save',
                       style: TextStyle(
