@@ -220,7 +220,7 @@ class TrxDetailsCubit extends Cubit<TrxDetailsController> {
 
   bool get isButtonEnabled {
     for (int i = 0; i < state.transactionDetails!.length; i++) {
-      if (state.transactionDetails![i].barcode == '') {
+      if (state.transactionDetails![i].Barcodes.isEmpty) {
         continue;
       }
       if (state.transactionDetails![i].scannedQty !=

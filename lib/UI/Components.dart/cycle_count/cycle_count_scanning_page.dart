@@ -6,6 +6,7 @@ import 'package:romancewhs/Controllers/cycle_count_controller.dart';
 import 'package:romancewhs/Models/cycle_count_detail.dart';
 import 'package:romancewhs/UX/Theme.dart';
 import 'package:vibration/vibration.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class CycleCountScanningPage extends StatefulWidget {
   const CycleCountScanningPage({
@@ -18,8 +19,7 @@ class CycleCountScanningPage extends StatefulWidget {
   final String portfolioName;
 
   @override
-  State<CycleCountScanningPage> createState() =>
-      _CycleCountScanningPageState();
+  State<CycleCountScanningPage> createState() => _CycleCountScanningPageState();
 }
 
 class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
@@ -33,6 +33,11 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
   late CycleCountCubit cubit;
   late ScrollController listScrollController;
   bool _keyboardVisible = false;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  Future<void> _playErrorSound() async {
+    await _audioPlayer.play(AssetSource('sounds/error.mp3'));
+  }
 
   @override
   void initState() {
@@ -73,6 +78,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     barcodeFocusNode.dispose();
     quantityFocusNode.dispose();
     listScrollController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -131,7 +137,8 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
     if (barcode.isEmpty) return;
 
     final results = await cubit.findItemByBarcode(barcode);
-    final exactMatches = results.where((item) => item['barcode'] == barcode).toList();
+    final exactMatches =
+        results.where((item) => item['barcode'] == barcode).toList();
 
     if (exactMatches.isEmpty) {
       // Item not found in portfolio
@@ -148,6 +155,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
           barcodeFocusNode.requestFocus();
         } else {
           await Vibration.vibrate(duration: 400);
+          await _playErrorSound();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error: ${cubit.state.errorMessage}'),
@@ -184,6 +192,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
         }
         return;
       }
+      await _playErrorSound();
       await Vibration.vibrate(duration: 400);
       // No cached description - show manual entry dialog
       _showManualDescriptionDialog(barcode);
@@ -544,7 +553,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 child: Column(
                   children: List.generate(
                     matches.length,
-                        (index) => Container(
+                    (index) => Container(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: Material(
                         color: Colors.grey[100],
@@ -834,12 +843,12 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: searchController.text.isNotEmpty
                         ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        searchController.clear();
-                        setState(() {});
-                      },
-                    )
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              searchController.clear();
+                              setState(() {});
+                            },
+                          )
                         : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -934,7 +943,8 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                 Expanded(
                   child: Builder(
                     builder: (context) {
-                      final filteredItems = _getFilteredItems(state.scannedItems);
+                      final filteredItems =
+                          _getFilteredItems(state.scannedItems);
 
                       if (state.scannedItems.isEmpty) {
                         return Center(
@@ -968,7 +978,8 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                         );
                       }
 
-                      if (filteredItems.isEmpty && searchController.text.isNotEmpty) {
+                      if (filteredItems.isEmpty &&
+                          searchController.text.isNotEmpty) {
                         return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -1014,9 +1025,9 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                               borderRadius: BorderRadius.circular(8),
                               side: index == 0
                                   ? const BorderSide(
-                                color: secondaryColor,
-                                width: 2,
-                              )
+                                      color: secondaryColor,
+                                      width: 2,
+                                    )
                                   : BorderSide.none,
                             ),
                             child: Container(
@@ -1050,7 +1061,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               item.itemCode.isEmpty
@@ -1099,7 +1110,8 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                             value: 'delete',
                                             child: Row(
                                               children: [
-                                                Icon(Icons.delete, size: 16,
+                                                Icon(Icons.delete,
+                                                    size: 16,
                                                     color: Colors.red),
                                                 SizedBox(width: 8),
                                                 Text(
@@ -1154,7 +1166,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                         if (item.isAutomatic != 'A')
                                           Container(
                                             margin:
-                                            const EdgeInsets.only(left: 8),
+                                                const EdgeInsets.only(left: 8),
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 6,
                                               vertical: 2,
@@ -1162,11 +1174,11 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                             decoration: BoxDecoration(
                                               color: Colors.orange[100],
                                               borderRadius:
-                                              BorderRadius.circular(4),
+                                                  BorderRadius.circular(4),
                                             ),
                                             child: Text(
                                               item.isAutomatic == 'D' ||
-                                                  item.isAutomatic == 'QD'
+                                                      item.isAutomatic == 'QD'
                                                   ? 'Manual'
                                                   : 'Manual',
                                               style: const TextStyle(
@@ -1189,7 +1201,7 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                                         decoration: BoxDecoration(
                                           color: Colors.blue[50],
                                           borderRadius:
-                                          BorderRadius.circular(6),
+                                              BorderRadius.circular(6),
                                         ),
                                         child: Row(
                                           children: [
@@ -1239,18 +1251,18 @@ class _CycleCountScanningPageState extends State<CycleCountScanningPage> {
                     onPressed: state.scannedItems.isEmpty
                         ? null
                         : () async {
-                      bool success = await cubit.submitSession();
-                      if (success && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'Cycle count submitted successfully'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                        Navigator.of(context).pop();
-                      }
-                    },
+                            bool success = await cubit.submitSession();
+                            if (success && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Cycle count submitted successfully'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              Navigator.of(context).pop();
+                            }
+                          },
                     child: const Text(
                       'Save',
                       style: TextStyle(

@@ -25,6 +25,24 @@ class CycleCountCubit extends Cubit<CycleCountController> {
 
   CycleCountCubit(super.initialState);
 
+  /// Sanitize text for XML compatibility
+  String _sanitizeForXml(String text) {
+    if (text.isEmpty) return text;
+    
+    // Remove control characters (except tab, newline, carriage return)
+    String sanitized = text.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'), '');
+    
+    // Escape XML special characters
+    sanitized = sanitized
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&apos;');
+    
+    return sanitized;
+  }
+
   bool isQuantityAutomatic() {
     return state.automaticQuantityMode;
   }
@@ -565,7 +583,7 @@ class CycleCountCubit extends Cubit<CycleCountController> {
     }
   }
 
-  /// Export cycle count to Excel file
+  /// Export cycle count to Excel file - FIXED WITH XML SANITIZATION
   Future<bool> exportCycleCountToExcel(int headerId, String portfolioName) async {
     try {
       emit(state.copyWith(loading: true, error: false));
@@ -604,21 +622,23 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         final detail = detailsMaps[rowIndex];
         final dataRowIndex = rowIndex + 1;
 
+        // Barcode - SANITIZED
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 0,
           rowIndex: dataRowIndex,
         ))
-            .value = TextCellValue(detail['barcode']?.toString() ?? '');
+            .value = TextCellValue(_sanitizeForXml(detail['barcode']?.toString() ?? ''));
 
+        // ItemCode - SANITIZED
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 1,
           rowIndex: dataRowIndex,
         ))
-            .value = TextCellValue(detail['itemCode']?.toString() ?? '');
+            .value = TextCellValue(_sanitizeForXml(detail['itemCode']?.toString() ?? ''));
 
-        // Description with allowManualDescriptions check
+        // Description - SANITIZED
         final description = detail['description']?.toString() ?? '';
         sheet
             .cell(CellIndex.indexByColumnRow(
@@ -626,11 +646,14 @@ class CycleCountCubit extends Cubit<CycleCountController> {
           rowIndex: dataRowIndex,
         ))
             .value = TextCellValue(
-          description.isEmpty && !state.allowManualDescriptions
-              ? '-'
-              : description,
+          _sanitizeForXml(
+            description.isEmpty && !state.allowManualDescriptions
+                ? '-'
+                : description,
+          ),
         );
 
+        // Quantity
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 3,
@@ -638,27 +661,30 @@ class CycleCountCubit extends Cubit<CycleCountController> {
         ))
             .value = TextCellValue((detail['quantity'] ?? 0).toString());
 
+        // Notes - SANITIZED
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 4,
           rowIndex: dataRowIndex,
         ))
-            .value = TextCellValue(detail['notes']?.toString() ?? '');
+            .value = TextCellValue(_sanitizeForXml(detail['notes']?.toString() ?? ''));
 
+        // Timestamp - SANITIZED
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 5,
           rowIndex: dataRowIndex,
         ))
-            .value = TextCellValue(detail['timestamp']?.toString() ?? '');
+            .value = TextCellValue(_sanitizeForXml(detail['timestamp']?.toString() ?? ''));
 
+        // IsAutomatic - SANITIZED
         final isAutomaticValue = detail['isAutomatic']?.toString() ?? 'A';
         sheet
             .cell(CellIndex.indexByColumnRow(
           columnIndex: 6,
           rowIndex: dataRowIndex,
         ))
-            .value = TextCellValue(isAutomaticValue);
+            .value = TextCellValue(_sanitizeForXml(isAutomaticValue));
       }
 
       final directory = await getDownloadsDirectory();

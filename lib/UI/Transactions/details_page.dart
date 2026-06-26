@@ -296,7 +296,7 @@ class DetailsPage extends StatelessWidget {
                                                     left: 8,
                                                     bottom: 10),
                                                 decoration: BoxDecoration(
-                                                    color: detail.barcode == ''
+                                                    color: detail.Barcodes.isEmpty 
                                                         ? Colors.red[100]
                                                         : detail.scannedQty ==
                                                                 (detail.freeQty +

@@ -6,6 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import app_installer
+import audioplayers_darwin
 import device_info_plus
 import file_picker
 import package_info_plus
@@ -15,6 +16,7 @@ import sqflite_darwin
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   AppInstallerPlugin.register(with: registry.registrar(forPlugin: "AppInstallerPlugin"))
+  AudioplayersDarwinPlugin.register(with: registry.registrar(forPlugin: "AudioplayersDarwinPlugin"))
   DeviceInfoPlusMacosPlugin.register(with: registry.registrar(forPlugin: "DeviceInfoPlusMacosPlugin"))
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
